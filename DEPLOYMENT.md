@@ -68,25 +68,34 @@ sudo apt-get install -y git
 
 ---
 
-## Part 3 — Clone everything into one parent folder
+## Part 3 — Transfer the whole `aubrey` folder to the VPS in one go
 
-Pick a parent folder (this guide uses `/var/www/lankanads`):
+Instead of cloning the three repos separately on the server, push the entire
+local `aubrey` folder up as a single transfer with `rsync` (run this from
+your local machine, not the VPS). This skips `node_modules`, `.next` build
+output, and `.env` files — those get regenerated/recreated on the server
+(Parts 4–5), and `node_modules` should never be copied between machines since
+some packages compile native binaries specific to the OS/architecture.
 
+```bash
+# from e:\fiverr\aubrey locally (adjust user@host and remote path)
+rsync -avz --progress \
+  --exclude 'node_modules' \
+  --exclude '.next' \
+  --exclude '.env' \
+  --exclude '.git' \
+  ./ user@your-vps-ip:/var/www/lankanads/
+```
+
+No `rsync` on Windows? Use WinSCP, or `scp -r`, or zip the folder and upload/unzip
+it — any method that gets the folder onto the server works, `rsync` is just the
+one that skips excluded folders and re-syncs only changed files on future runs.
+
+First-time server prep:
 ```bash
 sudo mkdir -p /var/www/lankanads
 sudo chown $USER:$USER /var/www/lankanads
-cd /var/www/lankanads
-
-git clone https://github.com/MMAkbar993/lankanbackend.git backend
-git clone https://github.com/MMAkbar993/lankanfrontend.git frontend
-git clone https://github.com/<your-username>/lankanadmin.git admin
 ```
-
-If any of these repos are **private**, plain `https://` cloning will prompt for
-credentials. Easiest fix: generate a GitHub Personal Access Token
-(Settings → Developer settings → Personal access tokens) and use it as the
-password when prompted, or switch the remote to SSH with a deploy key added
-to each repo's Settings → Deploy keys.
 
 The result should match the layout `ecosystem.config.js` (see Part 6) expects:
 ```
@@ -96,9 +105,13 @@ The result should match the layout `ecosystem.config.js` (see Part 6) expects:
 ├── frontend/
 └── admin/
 ```
-Copy `ecosystem.config.js` from this local project into `/var/www/lankanads/`
-as well (it isn't inside any of the three repos, so it won't come via `git clone`
-— `scp` it up separately, or paste its contents into a new file on the VPS).
+Since this transfers the folder directly, `ecosystem.config.js` and everything
+else comes along automatically — no separate copy step needed.
+
+> Your `backend` and `frontend` folders still have their own GitHub remotes
+> (`lankanbackend`, `lankanfrontend`) — keep committing/pushing to those from
+> your local machine as usual for version history/backup. GitHub just isn't
+> what the VPS pulls *from* anymore; `rsync` is.
 
 ---
 
@@ -216,22 +229,28 @@ Make sure DNS A-records for all four hostnames point at the VPS's IP before runn
 
 ## Part 7 — Shipping future changes
 
-For each app you changed, from your local machine:
+Re-run the same `rsync` command from Part 3 from your local `aubrey` folder —
+it only transfers files that actually changed:
 ```bash
-cd backend   # or frontend / admin
-git add .
-git commit -m "describe the change"
-git push origin main
+rsync -avz --progress \
+  --exclude 'node_modules' \
+  --exclude '.next' \
+  --exclude '.env' \
+  --exclude '.git' \
+  ./ user@your-vps-ip:/var/www/lankanads/
 ```
 
-Then on the VPS:
+Then on the VPS, for whichever app(s) changed:
 ```bash
 cd /var/www/lankanads/backend    # or frontend / admin
-git pull origin main
 npm install               # only needed if package.json changed
 npm run build              # frontend/admin only — skip for backend
 pm2 restart lankanads-backend    # or lankanads-frontend / lankanads-admin
 ```
+
+(Separately, still `git commit`/`git push` from your local `backend`/`frontend`
+folders to their GitHub repos whenever you want — that's just for version
+history now, not part of the deploy path.)
 
 ---
 
