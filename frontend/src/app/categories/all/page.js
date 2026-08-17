@@ -522,7 +522,7 @@ function CategoryAdCard({ ad }) {
                             strokeWidth={2.2}
                         />
 
-                        {timeAgo(ad.createdAt)}
+                        {timeAgo(ad.approvedAt || ad.createdAt)}
                     </span>
                 </div>
             </div>

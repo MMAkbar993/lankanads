@@ -150,7 +150,7 @@ export default function AdDetailsPage() {
 
             <span className="flex items-center gap-1">
               <Clock size={14} className="text-[var(--primary)]" />
-              {timeAgo(ad.createdAt)}
+              {timeAgo(ad.approvedAt || ad.createdAt)}
             </span>
           </div>
           <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">

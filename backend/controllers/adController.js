@@ -19,6 +19,35 @@ const escapeRegex = (value = "") => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
 
+const PREMIUM_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+// Ads keep VIP/Super placement for 24h from approval, then rank/display as
+// Normal — computed live here so listing order is always correct even
+// during the (up to hourly) gap before adScheduler.js's batch downgrade
+// job updates the stored `type` field to match.
+const buildTypeFilter = (baseFilter, adType, cutoff) => {
+  const normalizedType = { $regex: `^${escapeRegex(adType)}$`, $options: "i" };
+  let typeCondition;
+
+  if (adType === "VIP Ad" || adType === "Super Ad") {
+    typeCondition = { type: normalizedType, approvedAt: { $gt: cutoff } };
+  } else if (adType === "Normal Ad") {
+    typeCondition = {
+      $or: [
+        { type: normalizedType },
+        {
+          type: { $regex: "^(VIP Ad|Super Ad)$", $options: "i" },
+          approvedAt: { $lte: cutoff },
+        },
+      ],
+    };
+  } else {
+    typeCondition = { type: normalizedType };
+  }
+
+  return { $and: [baseFilter, typeCondition] };
+};
+
 const buildAdFields = (req, adId, image) => {
   const {
     type,
@@ -228,15 +257,13 @@ exports.getPublicAds = async (req, res) => {
     }
 
     const sortOrder = { approvedAt: -1, createdAt: -1 };
+    const premiumCutoff = new Date(now.getTime() - PREMIUM_WINDOW_MS);
 
     if (typeFilter) {
       const LIMIT = 20;
       const skip = (page - 1) * LIMIT;
 
-      const singleTypeFilter = {
-        ...baseFilter,
-        type: { $regex: `^${escapeRegex(typeFilter)}$`, $options: "i" },
-      };
+      const singleTypeFilter = buildTypeFilter(baseFilter, typeFilter, premiumCutoff);
 
       const [ads, totalAds] = await Promise.all([
         Ad.find(singleTypeFilter)
@@ -266,18 +293,9 @@ exports.getPublicAds = async (req, res) => {
       });
     }
 
-    const vipFilter = {
-      ...baseFilter,
-      type: { $regex: "^VIP Ad$", $options: "i" },
-    };
-    const superFilter = {
-      ...baseFilter,
-      type: { $regex: "^Super Ad$", $options: "i" },
-    };
-    const normalFilter = {
-      ...baseFilter,
-      type: { $regex: "^Normal Ad$", $options: "i" },
-    };
+    const vipFilter = buildTypeFilter(baseFilter, "VIP Ad", premiumCutoff);
+    const superFilter = buildTypeFilter(baseFilter, "Super Ad", premiumCutoff);
+    const normalFilter = buildTypeFilter(baseFilter, "Normal Ad", premiumCutoff);
 
     const superSkip = (page - 1) * SUPER_LIMIT;
     const normalSkip = (page - 1) * NORMAL_LIMIT;
@@ -531,23 +549,20 @@ const getAdsByType = async (req, res, adType) => {
     const location = req.query.location?.trim() || "";
     const search = req.query.search?.trim() || "";
 
-    const filter = {
+    const baseFilter = {
       status: "approved",
-      type: {
-        $regex: `^${escapeRegex(adType)}$`,
-        $options: "i",
-      },
+      $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
     };
 
     if (category) {
-      filter.category = {
+      baseFilter.category = {
         $regex: `^${escapeRegex(category)}$`,
         $options: "i",
       };
     }
 
     if (location) {
-      filter.location = {
+      baseFilter.location = {
         $regex: escapeRegex(location),
         $options: "i",
       };
@@ -556,19 +571,26 @@ const getAdsByType = async (req, res, adType) => {
     if (search) {
       const safeSearch = escapeRegex(search);
 
-      filter.$or = [
-        { title: { $regex: safeSearch, $options: "i" } },
-        { category: { $regex: safeSearch, $options: "i" } },
-        { location: { $regex: safeSearch, $options: "i" } },
-        { adId: { $regex: safeSearch, $options: "i" } },
-        { description: { $regex: safeSearch, $options: "i" } },
+      baseFilter.$and = [
+        {
+          $or: [
+            { title: { $regex: safeSearch, $options: "i" } },
+            { category: { $regex: safeSearch, $options: "i" } },
+            { location: { $regex: safeSearch, $options: "i" } },
+            { adId: { $regex: safeSearch, $options: "i" } },
+            { description: { $regex: safeSearch, $options: "i" } },
+          ],
+        },
       ];
     }
+
+    const premiumCutoff = new Date(Date.now() - PREMIUM_WINDOW_MS);
+    const filter = buildTypeFilter(baseFilter, adType, premiumCutoff);
 
     const [ads, totalAds] = await Promise.all([
       Ad.find(filter)
         .populate("user", "accountId phone name")
-        .sort({ createdAt: -1 })
+        .sort({ approvedAt: -1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),

@@ -138,7 +138,7 @@ export default function SavedAdsPage() {
                                             </div>
 
                                             <span className="rounded-full bg-[var(--gray)] px-2.5 py-1 text-[12px] font-semibold text-gray-500">
-                                                {timeAgo(item.createdAt)}
+                                                {timeAgo(item.approvedAt || item.createdAt)}
                                             </span>
                                         </div>
                                     </div>
