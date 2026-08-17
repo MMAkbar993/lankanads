@@ -125,6 +125,7 @@ export default function LoginPage() {
                                 onChange={setPhone}
                                 enableSearch
                                 disableCountryGuess
+                                countryCodeEditable={false}
                                 placeholder="Enter phone number"
                                 containerClass="!w-full"
                                 inputClass="!w-full !h-12 !text-[14px] !rounded-md !border !border-slate-300 !pl-14"

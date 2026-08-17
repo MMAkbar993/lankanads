@@ -115,69 +115,62 @@ exports.sendOtp = async (req, res) => {
 //         });
 //     }
 // };
-exports.changePhone = async (req, res) => {
-    try {
-        const { newPhone, otp } = req.body;
+// Shared by verifyOtp (login) and verifyOtpOnly (ad contact-number
+// verification) — checks the OTP and consumes it, without deciding what
+// happens after a valid verification (that differs per caller).
+const checkAndConsumeOtp = async (phone, otp) => {
+    const otpDoc = await Otp.findOne({ phone });
 
-        if (!newPhone || !otp) {
-            return res.status(400).json({
-                success: false,
-                message: "New phone number and OTP are required",
-            });
-        }
+    if (!otpDoc) {
+        return { ok: false, status: 400, message: "OTP not found. Please request again." };
+    }
 
-        const otpDoc = await Otp.findOne({ phone: newPhone });
-
-        if (!otpDoc) {
-            return res.status(400).json({
-                success: false,
-                message: "OTP not found. Please request again.",
-            });
-        }
-
-        if (otpDoc.expiresAt < new Date()) {
-            await Otp.deleteOne({ _id: otpDoc._id });
-
-            return res.status(400).json({
-                success: false,
-                message: "OTP expired. Please request again.",
-            });
-        }
-
-        const hashedInputOtp = hashOtp(otp);
-
-        if (otpDoc.otp !== hashedInputOtp) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid OTP",
-            });
-        }
-
-        const existingUser = await User.findOne({ phone: newPhone });
-
-        if (existingUser && !existingUser._id.equals(req.user._id)) {
-            return res.status(409).json({
-                success: false,
-                message: "This phone number is already in use by another account",
-            });
-        }
-
-        req.user.phone = newPhone;
-        await req.user.save();
-
+    if (otpDoc.expiresAt < new Date()) {
         await Otp.deleteOne({ _id: otpDoc._id });
+        return { ok: false, status: 400, message: "OTP expired. Please request again." };
+    }
+
+    if (otpDoc.otp !== hashOtp(otp)) {
+        return { ok: false, status: 400, message: "Invalid OTP" };
+    }
+
+    await Otp.deleteOne({ _id: otpDoc._id });
+    return { ok: true };
+};
+
+// Verifies an OTP for a phone number without logging in/creating a user —
+// used when a user wants to prove ownership of a number to use as an ad's
+// display contact number, which should not affect their account/session.
+exports.verifyOtpOnly = async (req, res) => {
+    try {
+        const { phone, otp } = req.body;
+
+        if (!phone || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: "Phone and OTP are required",
+            });
+        }
+
+        const result = await checkAndConsumeOtp(phone, otp);
+
+        if (!result.ok) {
+            return res.status(result.status).json({
+                success: false,
+                message: result.message,
+            });
+        }
 
         return res.json({
             success: true,
-            message: "Phone number updated successfully",
-            user: req.user,
+            message: "Phone number verified",
         });
     } catch (error) {
-        console.error("Change Phone error:", error);
+        console.error("Verify OTP Only error:", error);
 
         return res.status(500).json({
             success: false,
-            message: "Failed to change phone number",
+            message: "OTP verification failed",
             error: error.message,
         });
     }
@@ -194,30 +187,12 @@ exports.verifyOtp = async (req, res) => {
             });
         }
 
-        const otpDoc = await Otp.findOne({ phone });
+        const result = await checkAndConsumeOtp(phone, otp);
 
-        if (!otpDoc) {
-            return res.status(400).json({
+        if (!result.ok) {
+            return res.status(result.status).json({
                 success: false,
-                message: "OTP not found. Please request again.",
-            });
-        }
-
-        if (otpDoc.expiresAt < new Date()) {
-            await Otp.deleteOne({ _id: otpDoc._id });
-
-            return res.status(400).json({
-                success: false,
-                message: "OTP expired. Please request again.",
-            });
-        }
-
-        const hashedInputOtp = hashOtp(otp);
-
-        if (otpDoc.otp !== hashedInputOtp) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid OTP",
+                message: result.message,
             });
         }
 
@@ -240,8 +215,6 @@ exports.verifyOtp = async (req, res) => {
             user.lastLoginAt = new Date();
             await user.save();
         }
-
-        await Otp.deleteOne({ _id: otpDoc._id });
 
         const token = jwt.sign(
             {

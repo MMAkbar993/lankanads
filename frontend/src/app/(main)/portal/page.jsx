@@ -8,16 +8,10 @@ import {
   toggleAdStatus,
   republishAd,
 } from "@/../redux/features/adSlice";
-import { loginSuccess } from "@/../redux/features/authSlice";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import axios from "axios";
-import PhoneInput from "react-phone-input-2";
-import "react-phone-input-2/lib/style.css";
 import { getImageUrl } from "@/lib/getImageUrl";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function PortalPage() {
   const { user } = useSelector((state) => state.auth);
@@ -29,8 +23,6 @@ export default function PortalPage() {
         <InfoCard title="Account Type" value="User" />
       </div>
 
-      <ChangePhoneCard />
-
       <div className="flex">
         <TabLink label="My Ads" href="/portal" active />
         <TabLink label="New Ad" href="/portal/new-ad" className="-ml-px" />
@@ -40,136 +32,6 @@ export default function PortalPage() {
       <div className="mt-2 rounded-md rounded-tl-none border border-slate-300 p-6">
         <MyAdsTab />
       </div>
-    </div>
-  );
-}
-
-function ChangePhoneCard() {
-  const dispatch = useDispatch();
-  const { user, token } = useSelector((state) => state.auth);
-
-  const [step, setStep] = useState("idle"); // idle | otp
-  const [newPhone, setNewPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const sendOtp = async () => {
-    if (!newPhone) {
-      toast.error("Please enter a new phone number");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      await axios.post(`${API_BASE_URL}/api/auth/send-otp`, {
-        phone: `+${newPhone}`,
-      });
-
-      toast.success("OTP has been sent via SMS.");
-      setStep("otp");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to send OTP");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyAndUpdate = async () => {
-    if (!otp) {
-      toast.error("Please enter the OTP");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const res = await axios.patch(
-        `${API_BASE_URL}/api/auth/change-phone`,
-        { newPhone: `+${newPhone}`, otp },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      dispatch(loginSuccess({ token, user: res.data.user }));
-
-      toast.success("Mobile number updated successfully");
-      setStep("idle");
-      setNewPhone("");
-      setOtp("");
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message || "Failed to update mobile number"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="mb-6 rounded-md border border-slate-300 p-5">
-      <h3 className="mb-1 text-[15px] font-bold text-slate-900">
-        Change Mobile Number
-      </h3>
-
-      <p className="mb-3 text-[13px] text-slate-500">
-        Current number: {user?.phone || "N/A"}
-      </p>
-
-      {step === "idle" ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <PhoneInput
-            country="lk"
-            value={newPhone}
-            onChange={setNewPhone}
-            enableSearch
-            disableCountryGuess
-            placeholder="Enter new phone number"
-            containerClass="!w-full sm:!max-w-[280px]"
-            inputClass="!w-full !h-11 !text-[14px] !rounded-md !border !border-slate-300 !pl-14"
-            buttonClass="!border !border-slate-300 !rounded-l-md !bg-white"
-          />
-
-          <button
-            type="button"
-            onClick={sendOtp}
-            disabled={loading}
-            className="h-11 cursor-pointer rounded-md bg-slate-950 px-5 text-[13px] font-semibold text-white disabled:opacity-50"
-          >
-            {loading ? "Sending..." : "Send OTP"}
-          </button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <input
-            type="text"
-            value={otp}
-            maxLength={6}
-            onChange={(e) => setOtp(e.target.value)}
-            placeholder="Verification code"
-            className="h-11 w-full max-w-[200px] rounded-md border border-slate-300 px-4 text-[14px] outline-none"
-          />
-
-          <button
-            type="button"
-            onClick={verifyAndUpdate}
-            disabled={loading}
-            className="h-11 cursor-pointer rounded-md bg-slate-950 px-5 text-[13px] font-semibold text-white disabled:opacity-50"
-          >
-            {loading ? "Verifying..." : "Verify & Update"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setStep("idle");
-              setOtp("");
-            }}
-            className="h-11 cursor-pointer rounded-md border border-slate-300 px-5 text-[13px] font-semibold text-slate-700"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
     </div>
   );
 }
