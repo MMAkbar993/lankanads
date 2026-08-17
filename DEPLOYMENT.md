@@ -95,6 +95,9 @@ First-time server prep:
 ```bash
 sudo mkdir -p /var/www/lankanads
 sudo chown $USER:$USER /var/www/lankanads
+
+ssh root@187.127.220.64
+dWvf/s92Phkcp)0f
 ```
 
 The result should match the layout `ecosystem.config.js` (see Part 6) expects:
@@ -156,8 +159,10 @@ NEXT_PUBLIC_API_BASE_URL=https://api.lankanadslk.com
 ## Part 5 — Install, build, and start
 
 ```bash
+ssh root@187.127.220.64
+dWvf/s92Phkcp)0f
 cd /var/www/lankanads
-
+git pull origin main
 cd backend && npm install && cd ..
 cd frontend && npm install && npm run build && cd ..
 cd admin && npm install && npm run build && cd ..
@@ -204,6 +209,10 @@ server {
 server {
     listen 80;
     server_name api.lankanadslk.com;
+    # Backend/multer accepts uploads up to 5MB (see uploadMiddleware.js) —
+    # nginx's own default is 1MB, which silently rejects anything bigger
+    # before it reaches the app. Must be raised to match.
+    client_max_body_size 10m;
     location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
