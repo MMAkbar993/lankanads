@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PostAdButton from "@/components/PostAdButton";
 
 /* =========================
    ICONS
@@ -310,8 +311,7 @@ function PlanCard({ plan }) {
         ))}
       </ul>
 
-      <Link
-        href={`/portal/new-ad?package=${plan.id}`}
+      <PostAdButton
         className="mt-6 flex h-10 items-center justify-center rounded-md border text-[13px] font-semibold transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
         style={
           isNormal
@@ -328,7 +328,7 @@ function PlanCard({ plan }) {
         }
       >
         Choose {plan.name.replace(" Ad", "")}
-      </Link>
+      </PostAdButton>
     </article>
   );
 }
@@ -534,12 +534,11 @@ export default function PricingPage() {
               </p>
 
               <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
-                <Link
-                  href="/portal"
+                <PostAdButton
                   className="flex h-10 min-w-[165px] items-center justify-center rounded-md bg-[#ED145B] px-5 text-[13px] font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#D10F50]"
                 >
                   Post Your Ad Now
-                </Link>
+                </PostAdButton>
 
                 <Link
                   href="/post-ad"
