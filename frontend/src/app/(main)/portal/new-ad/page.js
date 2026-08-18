@@ -12,6 +12,27 @@ import "react-phone-input-2/lib/style.css";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+// Reads the logged-in user's phone straight from the `user` cookie (the
+// same one authSlice.js writes on login), synchronously, at mount time —
+// avoids depending on the AuthLoader -> loadUserFromStorage -> redux
+// dispatch cycle having already completed on a fresh page load.
+const getStoredPhone = () => {
+    if (typeof document === "undefined") return "";
+
+    const match = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("user="));
+
+    if (!match) return "";
+
+    try {
+        const storedUser = JSON.parse(decodeURIComponent(match.split("=")[1]));
+        return storedUser?.phone || "";
+    } catch {
+        return "";
+    }
+};
+
 export default function NewAdPage() {
     const router = useRouter();
     const dispatch = useDispatch();
@@ -29,19 +50,23 @@ export default function NewAdPage() {
     const [phoneOtp, setPhoneOtp] = useState("");
     const [phoneOtpLoading, setPhoneOtpLoading] = useState(false);
 
-    const [form, setForm] = useState({
-        type: "Super Ad",
-        title: "",
-        category: "General",
-        location: "",
-        price: "",
-        description: "",
-        phone: user?.phone || "",
-        whatsappNumber: user?.whatsappNumber || "",
-        whatsapp: false,
-        telegram: false,
-        imo: false,
-        viber: false,
+    const [form, setForm] = useState(() => {
+        const storedPhone = getStoredPhone();
+
+        return {
+            type: "Super Ad",
+            title: "",
+            category: "General",
+            location: "",
+            price: "",
+            description: "",
+            phone: user?.phone || storedPhone,
+            whatsappNumber: user?.whatsappNumber || "",
+            whatsapp: false,
+            telegram: false,
+            imo: false,
+            viber: false,
+        };
     });
 
     // `user` isn't hydrated from the auth cookie until just after the first
