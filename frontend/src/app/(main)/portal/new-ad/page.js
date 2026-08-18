@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { createAd, getMyAds } from "@/../redux/features/adSlice";
 import { useRouter } from "next/navigation";
@@ -43,6 +43,24 @@ export default function NewAdPage() {
         imo: false,
         viber: false,
     });
+
+    // `user` isn't hydrated from the auth cookie until just after the first
+    // render, so the useState initializer above often runs while it's still
+    // null on a hard reload. Fill phone/whatsapp in once it arrives, but
+    // never overwrite a number already set via the Change Phone flow.
+    useEffect(() => {
+        if (!user?.phone) return;
+
+        setForm((prev) => {
+            if (prev.phone) return prev;
+
+            return {
+                ...prev,
+                phone: user.phone,
+                whatsappNumber: prev.whatsapp ? user.phone : prev.whatsappNumber,
+            };
+        });
+    }, [user]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
