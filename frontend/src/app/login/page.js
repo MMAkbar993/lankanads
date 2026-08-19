@@ -13,9 +13,11 @@ import Link from "next/link";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-// TODO: replace with client-provided Sinhala text
-const TODO_SINHALA_LINE_1 = "TODO_SINHALA_LINE_1";
-const TODO_SINHALA_LINE_2 = "TODO_SINHALA_LINE_2";
+const SINHALA_INTRO =
+    "ගිණුමට log වීම සහ ගිණුමක් සාදා ගැනීම යන කාර්‍යයන් දෙකටම මෙම form එක භාවිතා කරන්න.";
+const SINHALA_PHONE_HELPER =
+    "ඔබගේ දුරකතන අංකය ඇතුලත් කර Send OTP Click කරන්න.";
+const SINHALA_AGENT_HELPER = "දැන්වීමක් පලකර ගැනීමට නියෝජිත සහාය.";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -93,16 +95,12 @@ export default function LoginPage() {
                     Login / Registration
                 </h1>
 
-                <p className="mb-2 text-[14px] leading-6 text-slate-500">
+                <p className="text-[14px] leading-6 text-slate-500">
                     Use this form both for logging in and posting an advertisement.
                 </p>
 
                 <p className="mb-2 text-[14px] leading-6 text-slate-500">
-                    {TODO_SINHALA_LINE_1}
-                </p>
-
-                <p className="mb-2 text-[14px] leading-6 text-slate-500">
-                    {TODO_SINHALA_LINE_2}
+                    {SINHALA_INTRO}
                 </p>
 
                 <div className="mb-6 h-1 w-14 rounded-full bg-red-600" />
@@ -113,9 +111,13 @@ export default function LoginPage() {
                             Enter Phone Number
                         </h2>
 
-                        <p className="mb-5 text-[14px] leading-6 text-slate-500">
+                        <p className="text-[14px] leading-6 text-slate-500">
                             Enter your phone number and click{" "}
                             <span className="font-semibold">Send OTP</span>.
+                        </p>
+
+                        <p className="mb-5 text-[14px] leading-6 text-slate-500">
+                            {SINHALA_PHONE_HELPER}
                         </p>
 
                         <div className="mb-5">
@@ -149,8 +151,12 @@ export default function LoginPage() {
                             Agent Support for Posting Ads
                         </h3>
 
-                        <p className="mt-2 mb-4 text-[14px] text-slate-500">
+                        <p className="mt-2 text-[14px] text-slate-500">
                             Get assistance from an agent to post your advertisement.
+                        </p>
+
+                        <p className="mb-4 text-[14px] text-slate-500">
+                            {SINHALA_AGENT_HELPER}
                         </p>
 
                         <Link

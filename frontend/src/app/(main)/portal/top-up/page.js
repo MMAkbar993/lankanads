@@ -6,8 +6,7 @@ import { Gem, Crown, ShieldCheck } from "lucide-react";
 
 const WHATSAPP_NUMBER = "0761323624";
 
-// TODO: replace with client-provided eZ Cash number
-const TODO_EZ_CASH_NUMBER = "TODO_EZ_CASH_NUMBER";
+const EZ_CASH_NUMBER = "0761323624";
 
 const PACKAGES = [
     { label: "Vip Ad",    price: "Rs. 8,000.00" },
@@ -88,7 +87,7 @@ export default function TopUpPage() {
                 </Link>
 
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                    <p className="text-[15px] font-bold text-blue-700">Ez Cash: {TODO_EZ_CASH_NUMBER}</p>
+                    <p className="text-[15px] font-bold text-blue-700">Ez Cash: {EZ_CASH_NUMBER}</p>
                     <p className="mt-1 text-[15px] text-blue-700">
                             ඊසි කෑශ් හරහා මුදල් ගෙවීම සදහා ඉහත අංකය භාවිතා කරන්න.
                     </p>
