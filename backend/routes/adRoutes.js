@@ -6,6 +6,7 @@ const {
     updateAd,
     deleteAd,
     getPublicAds,
+    getPublicAdById,
     getVipAds,
     getSuperAds,
     getNormalAds,
@@ -52,6 +53,9 @@ router.get("/public", getPublicAds);
 router.get("/public/vip", getVipAds);
 router.get("/public/super", getSuperAds);
 router.get("/public/normal", getNormalAds);
+// Must stay after the literal /public/vip|super|normal routes above so
+// this wildcard doesn't shadow them.
+router.get("/public/:id", getPublicAdById);
 
 router.post("/:id/toggle-like", protect, toggleLike);
 

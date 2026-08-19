@@ -70,6 +70,38 @@ export const getPublicAds = createAsyncThunk(
     }
 );
 
+// Fetches one ad directly by id — used by the ad-detail page when the ad
+// isn't already sitting in `ads` (e.g. a direct reload or a link opened in
+// a new tab, where there's no prior browsing to have populated the list).
+export const getPublicAdById = createAsyncThunk(
+    "publicAds/getPublicAdById",
+    async (id, { rejectWithValue }) => {
+        try {
+            if (!API_BASE_URL) {
+                throw new Error("NEXT_PUBLIC_API_BASE_URL is missing");
+            }
+
+            const res = await fetch(`${API_BASE_URL}/api/ads/public/${id}`, {
+                method: "GET",
+                headers: {
+                    Accept: "application/json",
+                },
+                cache: "no-store",
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data?.message || "Ad not found");
+            }
+
+            return data.ad;
+        } catch (error) {
+            return rejectWithValue(error.message || "Ad not found");
+        }
+    }
+);
+
 const initialState = {
     ads: [],
     loading: false,

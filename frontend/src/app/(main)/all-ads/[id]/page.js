@@ -12,6 +12,7 @@ import {
   toggleSave,
   incrementAdView,
 } from "@/../redux/features/adInteractionSlice";
+import { getPublicAdById } from "@/../redux/features/publicAdSlice";
 import { getImageUrl } from "@/lib/getImageUrl";
 
 export default function AdDetailsPage() {
@@ -27,9 +28,31 @@ export default function AdDetailsPage() {
 
   const { isLoggedIn } = useSelector((state) => state.auth);
 
-  const ad = ads.find((item) => item._id === id);
+  const adFromList = ads.find((item) => item._id === id);
+
+  const [fetchedAd, setFetchedAd] = useState(null);
+  const [fetchStatus, setFetchStatus] = useState("idle"); // idle | loading | notFound
+
+  const ad = adFromList || fetchedAd;
 
   const [viewsCount, setViewsCount] = useState(0);
+
+  // Ad wasn't already in the browsed list (direct reload, link opened in a
+  // new tab, etc.) — fetch it directly instead of assuming it's missing.
+  useEffect(() => {
+    if (adFromList || !id) return;
+
+    setFetchStatus("loading");
+
+    dispatch(getPublicAdById(id)).then((result) => {
+      if (getPublicAdById.fulfilled.match(result)) {
+        setFetchedAd(result.payload);
+        setFetchStatus("idle");
+      } else {
+        setFetchStatus("notFound");
+      }
+    });
+  }, [adFromList, id, dispatch]);
 
   useEffect(() => {
     if (!ad?._id) return;
@@ -42,6 +65,16 @@ export default function AdDetailsPage() {
       }
     });
   }, [dispatch, ad?._id]);
+
+  if (!ad && fetchStatus === "loading") {
+    return (
+      <section className="mx-auto max-w-5xl bg-[var(--gray)] px-4 py-10">
+        <div className="rounded-xl border border-[var(--border)] bg-white p-10 text-center text-sm font-semibold text-gray-400">
+          Loading ad...
+        </div>
+      </section>
+    );
+  }
 
   if (!ad) {
     return (

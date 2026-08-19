@@ -386,6 +386,47 @@ exports.getPublicAds = async (req, res) => {
   }
 };
 
+// Fetches a single ad for the public ad-detail page. Needed because a
+// direct reload / opening the ad in a new tab has no browsing history to
+// pull the ad from — the frontend previously only looked it up in the
+// list of already-fetched ads, which is empty on a fresh page load.
+exports.getPublicAdById = async (req, res) => {
+  try {
+    const ad = await Ad.findOne({
+      _id: req.params.id,
+      status: "approved",
+      $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
+    }).populate("user", "accountId phone name");
+
+    if (!ad) {
+      return res.status(404).json({
+        success: false,
+        message: "Ad not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      ad,
+    });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(404).json({
+        success: false,
+        message: "Ad not found",
+      });
+    }
+
+    console.error("Get Public Ad By Id Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get ad",
+      error: error.message,
+    });
+  }
+};
+
 exports.deleteAd = async (req, res) => {
   try {
     const ad = await Ad.findOne({
