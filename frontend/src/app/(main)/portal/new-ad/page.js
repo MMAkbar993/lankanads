@@ -12,6 +12,20 @@ import "react-phone-input-2/lib/style.css";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+const CATEGORIES = [
+    "Spa & Wellness Services",
+    "Girls Personal",
+    "Live Cam",
+    "Boys Personal",
+    "Shemale Personal",
+    "Marriage Proposals",
+    "Rooms",
+    "Real Estate",
+    "Electronics",
+    "Vehicles",
+    "Professional Services",
+];
+
 // Reads the logged-in user's phone straight from the `user` cookie (the
 // same one authSlice.js writes on login), synchronously, at mount time —
 // avoids depending on the AuthLoader -> loadUserFromStorage -> redux
@@ -56,7 +70,7 @@ export default function NewAdPage() {
         return {
             type: "Super Ad",
             title: "",
-            category: "General",
+            category: "",
             location: "",
             price: "",
             description: "",
@@ -203,6 +217,7 @@ export default function NewAdPage() {
 
         if (
             !form.title ||
+            !form.category ||
             !form.location ||
             !form.price ||
             !form.description
@@ -349,6 +364,25 @@ export default function NewAdPage() {
                             onChange={handleChange}
                             placeholder="Title"
                         />
+
+                        <div>
+                            <label className="mb-1 block text-[16px] font-semibold text-slate-800">
+                                Category
+                            </label>
+                            <select
+                                name="category"
+                                value={form.category}
+                                onChange={handleChange}
+                                className="h-10 w-full rounded border border-slate-300 px-3 text-[16px] outline-none"
+                            >
+                                <option value="">Select Category</option>
+                                {CATEGORIES.map((category) => (
+                                    <option key={category} value={category}>
+                                        {category}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
                         <Input
                             label="Location"
