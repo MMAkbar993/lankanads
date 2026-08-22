@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     BadgeCheck,
     ChevronLeft,
@@ -10,10 +10,12 @@ import {
     Users,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
+import toast from "react-hot-toast";
 import type { AppDispatch, RootState } from "@/store/index";
 import {
     clearUserError,
     fetchUsers,
+    makeAgent,
     setUserPage,
     setUserSearch,
     USERS_LIMIT,
@@ -54,9 +56,11 @@ const COLUMNS = [
     "Name",
     "Phone",
     "Verified",
+    "Role",
     "Last Login",
     "Created",
     "Updated",
+    "Actions",
 ];
 
 /* ---------------- Page ---------------- */
@@ -67,6 +71,22 @@ export default function AllUsersPage() {
     const { users, total, pages, page, search, loading, error } = useSelector(
         (state: RootState) => state.users
     );
+
+    const [promotingId, setPromotingId] = useState<string | null>(null);
+
+    const handleMakeAgent = async (id: string) => {
+        setPromotingId(id);
+
+        const result = await dispatch(makeAgent(id));
+
+        if (makeAgent.fulfilled.match(result)) {
+            toast.success("User is now an agent");
+        } else {
+            toast.error((result.payload as string) || "Failed to promote user");
+        }
+
+        setPromotingId(null);
+    };
 
     // debounced fetch
     useEffect(() => {
@@ -207,6 +227,18 @@ export default function AllUsersPage() {
                                                 )}
                                             </td>
 
+                                            <td className="whitespace-nowrap px-6 py-4">
+                                                {user.role === "agent" ? (
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-700">
+                                                        Agent
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                                                        User
+                                                    </span>
+                                                )}
+                                            </td>
+
                                             <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-400">
                                                 {formatDateTime(user.lastLoginAt)}
                                             </td>
@@ -217,6 +249,20 @@ export default function AllUsersPage() {
 
                                             <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-400">
                                                 {formatDate(user.updatedAt)}
+                                            </td>
+
+                                            <td className="whitespace-nowrap px-6 py-4">
+                                                {user.role !== "agent" && (
+                                                    <button
+                                                        onClick={() => handleMakeAgent(user._id)}
+                                                        disabled={promotingId === user._id}
+                                                        className="rounded-lg bg-pink-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                        {promotingId === user._id
+                                                            ? "Promoting..."
+                                                            : "Make Agent"}
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}

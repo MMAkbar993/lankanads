@@ -97,6 +97,12 @@ const adSchema = new mongoose.Schema(
         type: Date,
         default: null,
     },
+    // Credits actually charged to the agent who owns this ad on approval.
+    // Stays null for non-agent-owned ads and for ads not yet approved.
+    creditCost: {
+        type: Number,
+        default: null,
+    },
     likesCount: {
       type: Number,
       default: 0,

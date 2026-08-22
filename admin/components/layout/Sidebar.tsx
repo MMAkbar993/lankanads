@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, UserPlus, Users, Megaphone, X, UsersRound } from 'lucide-react';
+import { LayoutDashboard, UserPlus, Users, Megaphone, X, UsersRound, Coins } from 'lucide-react';
 
 const navItems = [
   { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
@@ -9,6 +9,7 @@ const navItems = [
   { label: 'All Agents', href: '/dashboard/agents', icon: Users },
   { label: 'All Ads', href: '/dashboard/ads', icon: Megaphone },
   { label: 'All Users', href: '/dashboard/users', icon: UsersRound },
+  { label: 'Agent Credits', href: '/dashboard/agent-users', icon: Coins },
 ];
 
 interface SidebarProps {

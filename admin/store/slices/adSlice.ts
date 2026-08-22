@@ -16,6 +16,7 @@ export interface AdUser {
   phone?: string;
   phoneNumber?: string;
   mobile?: string;
+  role?: 'user' | 'agent';
 }
 
 export interface Ad {
@@ -41,12 +42,13 @@ export interface Ad {
   description: string;
   phone: string;
   whatsappNumber: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'inactive';
   likesCount: number;
   viewsCount: number;
   createdAt: string;
   approvedAt?: string;
   expiresAt?: string;
+  creditCost?: number | null;
 }
 
 interface AdState {
@@ -94,6 +96,7 @@ interface UpdateAdResponse {
   success?: boolean;
   message?: string;
   ad?: Ad;
+  agentBalance?: number;
 }
 
 const initialState: AdState = {

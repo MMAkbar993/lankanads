@@ -268,7 +268,7 @@ export default function NewAdPage() {
         <div className="rounded-md bg-white p-6">
             <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-4">
                 <InfoCard title="Account ID" value={user?.accountId || "N/A"} />
-                <InfoCard title="Account Type" value="User" />
+                <InfoCard title="Account Type" value={user?.role === "agent" ? "Agent" : "User"} />
             </div>
 
             <div className="flex">

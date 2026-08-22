@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSelector } from "react-redux";
 import { Gem, Crown, ShieldCheck } from "lucide-react";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
 
 const WHATSAPP_NUMBER = "0761323624";
 
@@ -35,12 +36,16 @@ function WhatsAppIcon() {
 
 export default function TopUpPage() {
     const { user } = useSelector((state) => state.auth);
+    const isAgent = user?.role === "agent";
 
     return (
         <div className="rounded-md bg-white p-6">
             <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-4">
                 <InfoCard title="Account ID"   value={user?.accountId || "N/A"} />
-                <InfoCard title="Account Type" value="User" />
+                <InfoCard title="Account Type" value={isAgent ? "Agent" : "User"} />
+                {isAgent && (
+                    <InfoCard title="Credit Balance" value={user?.creditBalance ?? 0} />
+                )}
             </div>
 
             <div className="flex">
@@ -69,7 +74,7 @@ export default function TopUpPage() {
                 </ul>
 
                 <Link
-                    href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}`}
+                    href={buildWhatsAppLink("I need bank details")}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-slate-950 text-[16px] font-bold text-white transition hover:bg-slate-800"
@@ -79,7 +84,9 @@ export default function TopUpPage() {
                 </Link>
 
                 <Link
-                    href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}`}
+                    href={buildWhatsAppLink("I need bank details")}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex cursor-pointer h-14 w-full items-center justify-center gap-2 rounded-lg border-2 border-green-600 text-[16px] font-bold text-green-600 transition hover:bg-green-50"
                 >
                     <WhatsAppIcon />

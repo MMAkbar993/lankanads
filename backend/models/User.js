@@ -29,6 +29,19 @@ const userSchema = new mongoose.Schema(
         lastLoginAt: {
             type: Date,
         },
+
+        role: {
+            type: String,
+            enum: ["user", "agent"],
+            default: "user",
+            index: true,
+        },
+
+        creditBalance: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
     },
     { timestamps: true }
 );

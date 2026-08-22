@@ -176,6 +176,16 @@ exports.verifyOtpOnly = async (req, res) => {
     }
 };
 
+// Returns the caller's own current User doc — lets the frontend pick up
+// server-side changes (e.g. an admin top-up or role change) without
+// requiring the user to log out and back in.
+exports.getMe = async (req, res) => {
+    return res.json({
+        success: true,
+        user: req.user,
+    });
+};
+
 exports.verifyOtp = async (req, res) => {
     try {
         const { phone, otp } = req.body;

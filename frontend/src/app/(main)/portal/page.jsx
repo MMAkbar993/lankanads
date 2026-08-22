@@ -8,19 +8,39 @@ import {
   toggleAdStatus,
   republishAd,
 } from "@/../redux/features/adSlice";
+import { refreshUser } from "@/../redux/features/authSlice";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { getImageUrl } from "@/lib/getImageUrl";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
 
 export default function PortalPage() {
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { totalAds } = useSelector((state) => state.ads);
+
+  const isAgent = user?.role === "agent";
+
+  useEffect(() => {
+    dispatch(refreshUser());
+  }, [dispatch]);
 
   return (
     <div className="rounded-md bg-white p-6">
       <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-4">
         <InfoCard title="Account ID" value={user?.accountId || "N/A"} />
-        <InfoCard title="Account Type" value="User" />
+        <InfoCard title="Account Type" value={isAgent ? "Agent" : "User"} />
+
+        {isAgent && (
+          <>
+            <InfoCard
+              title="Credit Balance"
+              value={user?.creditBalance ?? 0}
+            />
+            <InfoCard title="Total Ads" value={totalAds ?? 0} />
+          </>
+        )}
       </div>
 
       <div className="flex">
@@ -262,6 +282,15 @@ function MyAdsTab() {
         >
           Contact Admin
         </button>
+
+        <a
+          href={buildWhatsAppLink("I need bank details")}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 ml-3 inline-block rounded-md border border-green-500 px-5 py-2"
+        >
+          I Need Bank Details
+        </a>
       </div>
 
       {showSkeleton ? (

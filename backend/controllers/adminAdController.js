@@ -1,4 +1,7 @@
 const Ad = require("../models/Ad");
+const User = require("../models/User");
+const AdTypeCost = require("../models/AdTypeCost");
+const CreditTransaction = require("../models/CreditTransaction");
 
 const allowedStatus = ["pending", "approved", "rejected"];
 
@@ -37,7 +40,7 @@ exports.getAdminAds = async (req, res) => {
 
         const [ads, total] = await Promise.all([
             Ad.find(filter)
-                .populate("user", "accountId phone name email")
+                .populate("user", "accountId phone name email role")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
@@ -79,33 +82,124 @@ exports.updateAdStatus = async (req, res) => {
             });
         }
 
-        const updateData = { status };
+        if (status !== "approved") {
+            const ad = await Ad.findByIdAndUpdate(
+                req.params.id,
+                { status },
+                { new: true, runValidators: true }
+            )
+                .populate("user", "accountId phone name email role")
+                .lean();
 
-        if (status === "approved") {
-            const now = new Date();
-            updateData.approvedAt = now;
-            updateData.expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); 
-        }
+            if (!ad) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Ad not found",
+                });
+            }
 
-        const ad = await Ad.findByIdAndUpdate(
-            req.params.id,
-            updateData,
-            { new: true, runValidators: true }
-        )
-            .populate("user", "accountId phone name email")
-            .lean();
-
-        if (!ad) {
-            return res.status(404).json({
-                success: false,
-                message: "Ad not found",
+            return res.status(200).json({
+                success: true,
+                message: "Ad status updated successfully",
+                ad,
             });
         }
 
+        // Approval path — also handles agent credit deduction.
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+        // Atomically claim the ad: only succeeds if it's still pending, so a
+        // duplicate/concurrent approval request for the same ad can never
+        // reach the deduction logic below more than once.
+        const claimedAd = await Ad.findOneAndUpdate(
+            { _id: req.params.id, status: "pending" },
+            { status: "approved", approvedAt: now, expiresAt },
+            { new: true }
+        );
+
+        if (!claimedAd) {
+            const existing = await Ad.findById(req.params.id).lean();
+
+            if (!existing) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Ad not found",
+                });
+            }
+
+            return res.status(409).json({
+                success: false,
+                message: "Ad is not pending — it may have already been approved",
+            });
+        }
+
+        const owner = await User.findById(claimedAd.user);
+
+        if (!owner || owner.role !== "agent") {
+            // Non-agent-owned ad — approval already happened above, nothing
+            // else changes, behavior stays identical to before this feature.
+            const ad = await Ad.findById(claimedAd._id)
+                .populate("user", "accountId phone name email role")
+                .lean();
+
+            return res.status(200).json({
+                success: true,
+                message: "Ad status updated successfully",
+                ad,
+            });
+        }
+
+        const costDoc = await AdTypeCost.findOne({ type: claimedAd.type });
+        const cost = costDoc?.creditCost ?? 0;
+
+        const debited = await User.findOneAndUpdate(
+            { _id: owner._id, creditBalance: { $gte: cost } },
+            { $inc: { creditBalance: -cost } },
+            { new: true }
+        );
+
+        if (!debited) {
+            // Insufficient balance — undo the claim so the ad goes back to
+            // exactly its pre-approval state. Safe: this request is the sole
+            // owner of the pending->approved transition, nothing else could
+            // have touched it in between.
+            await Ad.findByIdAndUpdate(claimedAd._id, {
+                status: "pending",
+                approvedAt: null,
+                expiresAt: null,
+            });
+
+            return res.status(400).json({
+                success: false,
+                message: `Agent has insufficient credits (needs ${cost}, has ${owner.creditBalance})`,
+            });
+        }
+
+        await CreditTransaction.create({
+            user: owner._id,
+            type: "debit",
+            amount: cost,
+            ad: claimedAd._id,
+            description: `Ad approval: ${claimedAd.adId} (${claimedAd.type})`,
+            balanceBefore: owner.creditBalance,
+            balanceAfter: debited.creditBalance,
+            admin: req.admin?._id || null,
+        });
+
+        const finalAd = await Ad.findByIdAndUpdate(
+            claimedAd._id,
+            { creditCost: cost },
+            { new: true }
+        )
+            .populate("user", "accountId phone name email role")
+            .lean();
+
         return res.status(200).json({
             success: true,
-            message: "Ad status updated successfully",
-            ad,
+            message: "Ad approved and credits deducted",
+            ad: finalAd,
+            agentBalance: debited.creditBalance,
         });
     } catch (error) {
         console.error("Update Ad Status Error:", error);
@@ -135,7 +229,7 @@ exports.updateAdType = async (req, res) => {
             { type },
             { new: true, runValidators: true }
         )
-            .populate("user", "accountId phone name email")
+            .populate("user", "accountId phone name email role")
             .lean();
 
         if (!ad) {
@@ -176,6 +270,14 @@ exports.updateAd = async (req, res) => {
                 });
             }
 
+            if (status === "approved") {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Use PATCH /admin/ads/:id/status to approve ads — it handles agent credit deduction.",
+                });
+            }
+
             updateData.status = status;
         }
 
@@ -202,7 +304,7 @@ exports.updateAd = async (req, res) => {
             updateData,
             { new: true, runValidators: true }
         )
-            .populate("user", "accountId phone name email")
+            .populate("user", "accountId phone name email role")
             .lean();
 
         if (!ad) {

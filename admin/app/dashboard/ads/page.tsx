@@ -398,12 +398,16 @@ export default function AdsPage() {
         result
       )
     ) {
+      const creditCost = result.payload.ad?.creditCost;
+
       toast.success(
-        'Ad status updated successfully'
+        typeof creditCost === 'number' && creditCost > 0
+          ? `Ad approved — ${creditCost} credits deducted (balance: ${result.payload.agentBalance})`
+          : 'Ad status updated successfully'
       );
     } else {
       toast.error(
-        'Failed to update status'
+        result.payload || 'Failed to update status'
       );
     }
   };
@@ -589,6 +593,10 @@ export default function AdsPage() {
                   const userPhone =
                     getUserPhone(ad.user);
 
+                  const isAgentAd =
+                    typeof ad.user === 'object' &&
+                    ad.user?.role === 'agent';
+
                   return (
                     <tr
                       key={ad._id}
@@ -596,6 +604,12 @@ export default function AdsPage() {
                       style={{
                         borderBottom:
                           '1px solid var(--border)',
+                        borderLeft: isAgentAd
+                          ? '3px solid #d97706'
+                          : '3px solid transparent',
+                        background: isAgentAd
+                          ? '#fffbeb'
+                          : undefined,
                       }}
                     >
                       {/* Image */}
@@ -634,16 +648,31 @@ export default function AdsPage() {
                       {/* User Info */}
                       <td className="px-4 py-3">
                         <div className="min-w-[150px]">
-                          <p
-                            className="max-w-[190px] truncate text-[13px] font-normal"
-                            style={{
-                              color:
-                                'var(--dark)',
-                            }}
-                            title={userName}
-                          >
-                            {userName}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p
+                              className="max-w-[150px] truncate text-[13px] font-normal"
+                              style={{
+                                color:
+                                  'var(--dark)',
+                              }}
+                              title={userName}
+                            >
+                              {userName}
+                            </p>
+
+                            {isAgentAd && (
+                              <span
+                                className="whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                                style={{
+                                  background: '#fef3c7',
+                                  color: '#b45309',
+                                }}
+                                title="Submitted by an agent account"
+                              >
+                                Agent
+                              </span>
+                            )}
+                          </div>
 
                           <p
                             className="mt-0.5 whitespace-nowrap text-xs text-gray-400"

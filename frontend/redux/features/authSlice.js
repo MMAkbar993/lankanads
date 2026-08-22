@@ -1,4 +1,7 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import axios from "axios";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 const COOKIE_MAX_AGE = 15 * 24 * 60 * 60;
 
@@ -27,6 +30,31 @@ const removeCookie = (name) => {
 
     document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
 };
+
+// Picks up server-side changes to the logged-in user (e.g. an admin top-up
+// or role change) without requiring a fresh OTP login.
+export const refreshUser = createAsyncThunk(
+    "auth/refreshUser",
+    async (_, { rejectWithValue }) => {
+        try {
+            const token = getCookie("token");
+
+            if (!token) {
+                throw new Error("Not logged in");
+            }
+
+            const res = await axios.get(`${API_BASE_URL}/api/auth/me`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            return res.data.user;
+        } catch (error) {
+            return rejectWithValue(
+                error.response?.data?.message || "Failed to refresh user"
+            );
+        }
+    }
+);
 
 const initialState = {
     user: null,
@@ -76,6 +104,12 @@ const authSlice = createSlice({
                 }
             }
         },
+    },
+    extraReducers: (builder) => {
+        builder.addCase(refreshUser.fulfilled, (state, action) => {
+            state.user = action.payload;
+            setCookie("user", JSON.stringify(action.payload));
+        });
     },
 });
 

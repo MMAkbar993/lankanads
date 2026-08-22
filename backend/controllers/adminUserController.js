@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const User = require("../models/User");
 
 const PUBLIC_FIELDS =
-    "accountId name phone isVerified lastLoginAt createdAt updatedAt";
+    "accountId name phone isVerified lastLoginAt role creditBalance createdAt updatedAt";
 
 /**
  * @desc    Get all users (paginated + searchable)
