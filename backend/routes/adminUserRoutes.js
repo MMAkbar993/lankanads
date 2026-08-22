@@ -5,8 +5,10 @@ const {
 } = require("../controllers/adminUserController");
 const {
     makeAgent,
+    removeAgent,
     listAgents,
     topUpAgent,
+    adjustAgentBalance,
     getUserTransactions,
     getAdTypeCosts,
     updateAdTypeCost,
@@ -23,7 +25,9 @@ router.get("/ad-type-costs", getAdTypeCosts);
 router.patch("/ad-type-costs/:type", updateAdTypeCost);
 router.get("/users/:id", getUserById);
 router.patch("/users/:id/make-agent", makeAgent);
+router.patch("/users/:id/remove-agent", removeAgent);
 router.post("/users/:id/top-up", topUpAgent);
+router.patch("/users/:id/adjust-balance", adjustAgentBalance);
 router.get("/users/:id/transactions", getUserTransactions);
 
 module.exports = router;

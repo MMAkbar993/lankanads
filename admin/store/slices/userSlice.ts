@@ -98,6 +98,25 @@ export const makeAgent = createAsyncThunk(
     }
 );
 
+export const removeAgent = createAsyncThunk(
+    'users/removeAgent',
+    async (userId: string, thunkAPI) => {
+        try {
+            const res = await api.patch(`/api/admin/users/${userId}/remove-agent`);
+
+            return res.data.user as User;
+        } catch (error: unknown) {
+            let message = 'Failed to remove agent';
+
+            if (axios.isAxiosError(error)) {
+                message = error.response?.data?.message ?? message;
+            }
+
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 const userSlice = createSlice({
     name: 'users',
     initialState,
@@ -141,6 +160,16 @@ const userSlice = createSlice({
             })
 
             .addCase(makeAgent.fulfilled, (state, action) => {
+                const index = state.users.findIndex(
+                    (u) => u._id === action.payload._id
+                );
+
+                if (index !== -1) {
+                    state.users[index] = action.payload;
+                }
+            })
+
+            .addCase(removeAgent.fulfilled, (state, action) => {
                 const index = state.users.findIndex(
                     (u) => u._id === action.payload._id
                 );

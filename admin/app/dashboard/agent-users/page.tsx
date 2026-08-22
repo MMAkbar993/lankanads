@@ -8,6 +8,8 @@ import type { AppDispatch, RootState } from "@/store/index";
 import {
     fetchAgents,
     topUpAgent,
+    adjustAgentBalance,
+    removeAgent,
     fetchAgentTransactions,
     fetchAdTypeCosts,
     updateAdTypeCost,
@@ -107,6 +109,102 @@ function TopUpModal({
                         className="w-full rounded-lg bg-pink-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {topUpLoading ? "Adding..." : "Add Credits"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function AdjustBalanceModal({
+    userId,
+    currentBalance,
+    onClose,
+}: {
+    userId: string;
+    currentBalance: number;
+    onClose: () => void;
+}) {
+    const dispatch: AppDispatch = useDispatch();
+    const { topUpLoading } = useSelector((state: RootState) => state.credit);
+
+    const [amount, setAmount] = useState("");
+    const [description, setDescription] = useState("");
+
+    const handleSubmit = async () => {
+        const numericAmount = Number(amount);
+
+        if (!Number.isFinite(numericAmount) || numericAmount === 0) {
+            toast.error("Enter a non-zero amount — positive to add, negative to deduct");
+            return;
+        }
+
+        const result = await dispatch(
+            adjustAgentBalance({
+                userId,
+                amount: numericAmount,
+                description: description || "Balance correction",
+            })
+        );
+
+        if (adjustAgentBalance.fulfilled.match(result)) {
+            toast.success("Balance adjusted");
+            onClose();
+        } else {
+            toast.error((result.payload as string) || "Failed to adjust balance");
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="absolute inset-0" onClick={onClose} />
+
+            <div className="relative z-10 w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
+                <button
+                    onClick={onClose}
+                    className="absolute right-4 top-4 rounded-full p-1 text-gray-400 hover:bg-gray-100"
+                >
+                    <X size={18} />
+                </button>
+
+                <h2 className="text-lg font-bold text-gray-900">Adjust Balance</h2>
+                <p className="mt-1 text-xs text-gray-400">
+                    Current balance: {currentBalance}. Use this to fix a wrong top-up —
+                    positive amounts add credits, negative amounts deduct them.
+                </p>
+
+                <div className="mt-4 space-y-3">
+                    <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-500">
+                            Amount (e.g. -50 to remove 50 credits)
+                        </label>
+                        <input
+                            type="number"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-pink-600"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block text-xs font-medium text-gray-500">
+                            Reason
+                        </label>
+                        <input
+                            type="text"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="e.g. Corrected wrong top-up amount"
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-pink-600"
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleSubmit}
+                        disabled={topUpLoading}
+                        className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {topUpLoading ? "Saving..." : "Save Adjustment"}
                     </button>
                 </div>
             </div>
@@ -298,11 +396,31 @@ export default function AgentUsersPage() {
         useSelector((state: RootState) => state.credit);
 
     const [topUpTarget, setTopUpTarget] = useState<string | null>(null);
+    const [adjustTarget, setAdjustTarget] = useState<string | null>(null);
     const [ledgerTarget, setLedgerTarget] = useState<string | null>(null);
+    const [removingId, setRemovingId] = useState<string | null>(null);
 
     useEffect(() => {
         dispatch(fetchAgents({ page: agentsPage }));
     }, [dispatch, agentsPage]);
+
+    const handleRemoveAgent = async (id: string) => {
+        if (!window.confirm("Remove agent access from this user? Their balance and history are kept.")) {
+            return;
+        }
+
+        setRemovingId(id);
+
+        const result = await dispatch(removeAgent(id));
+
+        if (removeAgent.fulfilled.match(result)) {
+            toast.success("Agent access removed");
+        } else {
+            toast.error((result.payload as string) || "Failed to remove agent");
+        }
+
+        setRemovingId(null);
+    };
 
     return (
         <div className="p-6 md:p-8">
@@ -383,7 +501,7 @@ export default function AgentUsersPage() {
                                             {agent.adCount}
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4">
-                                            <div className="flex gap-2">
+                                            <div className="flex flex-wrap gap-2">
                                                 <button
                                                     onClick={() => setTopUpTarget(agent._id)}
                                                     className="rounded-lg bg-pink-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-pink-700"
@@ -391,10 +509,23 @@ export default function AgentUsersPage() {
                                                     Top Up
                                                 </button>
                                                 <button
+                                                    onClick={() => setAdjustTarget(agent._id)}
+                                                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
+                                                >
+                                                    Adjust
+                                                </button>
+                                                <button
                                                     onClick={() => setLedgerTarget(agent._id)}
                                                     className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
                                                 >
                                                     Ledger
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRemoveAgent(agent._id)}
+                                                    disabled={removingId === agent._id}
+                                                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    {removingId === agent._id ? "Removing..." : "Remove"}
                                                 </button>
                                             </div>
                                         </td>
@@ -437,6 +568,16 @@ export default function AgentUsersPage() {
 
             {topUpTarget && (
                 <TopUpModal userId={topUpTarget} onClose={() => setTopUpTarget(null)} />
+            )}
+
+            {adjustTarget && (
+                <AdjustBalanceModal
+                    userId={adjustTarget}
+                    currentBalance={
+                        agents.find((a) => a._id === adjustTarget)?.creditBalance ?? 0
+                    }
+                    onClose={() => setAdjustTarget(null)}
+                />
             )}
 
             {ledgerTarget && (

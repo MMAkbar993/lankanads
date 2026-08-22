@@ -37,6 +37,134 @@ exports.makeAgent = async (req, res) => {
     }
 };
 
+// Demotes an agent back to a regular user. Their credit balance and full
+// transaction history are left untouched (not destroyed) — if they're
+// promoted again later, the old balance/ledger is still there. They keep
+// logging in exactly the same way; only the role flag changes.
+exports.removeAgent = async (req, res) => {
+    try {
+        const user = await User.findOneAndUpdate(
+            { _id: req.params.id, role: "agent" },
+            { role: "user" },
+            { new: true, runValidators: true }
+        ).select(PUBLIC_USER_FIELDS);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Agent not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Agent removed — user is now a regular user",
+            user,
+        });
+    } catch (error) {
+        console.error("Remove Agent Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to remove agent",
+            error: error.message,
+        });
+    }
+};
+
+// Corrects a balance (e.g. a wrong top-up amount) — accepts a signed
+// amount, positive to add, negative to deduct. Same atomic, balance-guarded
+// pattern as topUpAgent, recorded as its own ledger entry either way.
+exports.adjustAgentBalance = async (req, res) => {
+    try {
+        const amount = Number(req.body.amount);
+        const description = (req.body.description || "").trim();
+
+        if (!Number.isFinite(amount) || amount === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Amount must be a non-zero number",
+            });
+        }
+
+        const before = await User.findOne({ _id: req.params.id, role: "agent" });
+
+        if (!before) {
+            return res.status(404).json({
+                success: false,
+                message: "Agent not found",
+            });
+        }
+
+        if (amount > 0) {
+            const updated = await User.findOneAndUpdate(
+                { _id: req.params.id, role: "agent" },
+                { $inc: { creditBalance: amount } },
+                { new: true }
+            ).select(PUBLIC_USER_FIELDS);
+
+            await CreditTransaction.create({
+                user: updated._id,
+                type: "credit",
+                amount,
+                description: description || "Balance correction",
+                balanceBefore: before.creditBalance,
+                balanceAfter: updated.creditBalance,
+                admin: req.admin?._id || null,
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "Balance adjusted",
+                user: updated,
+            });
+        }
+
+        const debitAmount = Math.abs(amount);
+
+        const updated = await User.findOneAndUpdate(
+            {
+                _id: req.params.id,
+                role: "agent",
+                creditBalance: { $gte: debitAmount },
+            },
+            { $inc: { creditBalance: -debitAmount } },
+            { new: true }
+        ).select(PUBLIC_USER_FIELDS);
+
+        if (!updated) {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot deduct ${debitAmount} — agent only has ${before.creditBalance} credits`,
+            });
+        }
+
+        await CreditTransaction.create({
+            user: updated._id,
+            type: "debit",
+            amount: debitAmount,
+            description: description || "Balance correction",
+            balanceBefore: before.creditBalance,
+            balanceAfter: updated.creditBalance,
+            admin: req.admin?._id || null,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Balance adjusted",
+            user: updated,
+        });
+    } catch (error) {
+        console.error("Adjust Agent Balance Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to adjust balance",
+            error: error.message,
+        });
+    }
+};
+
 exports.listAgents = async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);

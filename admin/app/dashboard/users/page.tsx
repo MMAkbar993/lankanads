@@ -16,6 +16,7 @@ import {
     clearUserError,
     fetchUsers,
     makeAgent,
+    removeAgent,
     setUserPage,
     setUserSearch,
     USERS_LIMIT,
@@ -83,6 +84,24 @@ export default function AllUsersPage() {
             toast.success("User is now an agent");
         } else {
             toast.error((result.payload as string) || "Failed to promote user");
+        }
+
+        setPromotingId(null);
+    };
+
+    const handleRemoveAgent = async (id: string) => {
+        if (!window.confirm("Remove agent access from this user? Their credit balance and history are kept in case they're promoted again later.")) {
+            return;
+        }
+
+        setPromotingId(id);
+
+        const result = await dispatch(removeAgent(id));
+
+        if (removeAgent.fulfilled.match(result)) {
+            toast.success("Agent access removed");
+        } else {
+            toast.error((result.payload as string) || "Failed to remove agent");
         }
 
         setPromotingId(null);
@@ -252,7 +271,17 @@ export default function AllUsersPage() {
                                             </td>
 
                                             <td className="whitespace-nowrap px-6 py-4">
-                                                {user.role !== "agent" && (
+                                                {user.role === "agent" ? (
+                                                    <button
+                                                        onClick={() => handleRemoveAgent(user._id)}
+                                                        disabled={promotingId === user._id}
+                                                        className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                        {promotingId === user._id
+                                                            ? "Removing..."
+                                                            : "Remove Agent"}
+                                                    </button>
+                                                ) : (
                                                     <button
                                                         onClick={() => handleMakeAgent(user._id)}
                                                         disabled={promotingId === user._id}

@@ -114,6 +114,42 @@ export const topUpAgent = createAsyncThunk(
     }
 );
 
+export const adjustAgentBalance = createAsyncThunk(
+    'credit/adjustAgentBalance',
+    async (
+        { userId, amount, description }: { userId: string; amount: number; description?: string },
+        thunkAPI
+    ) => {
+        try {
+            const res = await api.patch(`/api/admin/users/${userId}/adjust-balance`, {
+                amount,
+                description,
+            });
+
+            return res.data.user as User;
+        } catch (error: unknown) {
+            return thunkAPI.rejectWithValue(
+                extractMessage(error, 'Failed to adjust balance')
+            );
+        }
+    }
+);
+
+export const removeAgent = createAsyncThunk(
+    'credit/removeAgent',
+    async (userId: string, thunkAPI) => {
+        try {
+            const res = await api.patch(`/api/admin/users/${userId}/remove-agent`);
+
+            return res.data.user as User;
+        } catch (error: unknown) {
+            return thunkAPI.rejectWithValue(
+                extractMessage(error, 'Failed to remove agent')
+            );
+        }
+    }
+);
+
 export const fetchAgentTransactions = createAsyncThunk(
     'credit/fetchAgentTransactions',
     async (userId: string, thunkAPI) => {
@@ -215,6 +251,37 @@ const creditSlice = createSlice({
             .addCase(topUpAgent.rejected, (state, action) => {
                 state.topUpLoading = false;
                 state.error = (action.payload as string) ?? 'Failed to top up agent';
+            })
+
+            .addCase(adjustAgentBalance.pending, (state) => {
+                state.topUpLoading = true;
+                state.error = null;
+            })
+            .addCase(adjustAgentBalance.fulfilled, (state, action) => {
+                state.topUpLoading = false;
+
+                const index = state.agents.findIndex(
+                    (a) => a._id === action.payload._id
+                );
+
+                if (index !== -1) {
+                    state.agents[index] = {
+                        ...state.agents[index],
+                        ...action.payload,
+                    };
+                }
+            })
+            .addCase(adjustAgentBalance.rejected, (state, action) => {
+                state.topUpLoading = false;
+                state.error = (action.payload as string) ?? 'Failed to adjust balance';
+            })
+
+            .addCase(removeAgent.fulfilled, (state, action) => {
+                state.agents = state.agents.filter((a) => a._id !== action.payload._id);
+                state.agentsTotal = Math.max(0, state.agentsTotal - 1);
+            })
+            .addCase(removeAgent.rejected, (state, action) => {
+                state.error = (action.payload as string) ?? 'Failed to remove agent';
             })
 
             .addCase(fetchAgentTransactions.pending, (state) => {
