@@ -272,7 +272,7 @@ export default function AdDetailsPage() {
           )}
 
           <div className="mt-8 space-y-5 text-[15px] leading-7 text-gray-600">
-            <p>{ad.description}</p>
+            <p className="whitespace-pre-line">{ad.description}</p>
 
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-7 text-blue-900">
               <p className="mb-3">
