@@ -7,7 +7,12 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import axios from "axios";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 import { getImageUrl } from "@/lib/getImageUrl";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function EditAdPage() {
   const router = useRouter();
@@ -17,10 +22,19 @@ export default function EditAdPage() {
   const { user } = useSelector((state) => state.auth);
   const { ads, loading } = useSelector((state) => state.ads);
 
+  const isAgent = user?.role === "agent";
+
   const ad = ads.find((a) => a._id === id);
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+
+  // Regular users must verify a different contact number via OTP before
+  // it's applied to the ad — agents are trusted and can edit it directly.
+  const [phoneChangeStep, setPhoneChangeStep] = useState("idle"); // idle | editing | otp
+  const [newPhoneValue, setNewPhoneValue] = useState("");
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [phoneOtpLoading, setPhoneOtpLoading] = useState(false);
 
   const [form, setForm] = useState({
     type: "",
@@ -95,6 +109,73 @@ export default function EditAdPage() {
         [name]: nextChecked,
       };
     });
+  };
+
+  const startPhoneChange = () => {
+    setNewPhoneValue("");
+    setPhoneOtp("");
+    setPhoneChangeStep("editing");
+  };
+
+  const cancelPhoneChange = () => {
+    setNewPhoneValue("");
+    setPhoneOtp("");
+    setPhoneChangeStep("idle");
+  };
+
+  const sendPhoneOtp = async () => {
+    if (!newPhoneValue) {
+      toast.error("Please enter the new phone number");
+      return;
+    }
+
+    setPhoneOtpLoading(true);
+
+    try {
+      await axios.post(`${API_BASE_URL}/api/auth/send-otp`, {
+        phone: `+${newPhoneValue}`,
+      });
+
+      toast.success("OTP has been sent via SMS.");
+      setPhoneChangeStep("otp");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setPhoneOtpLoading(false);
+    }
+  };
+
+  const verifyPhoneOtp = async () => {
+    if (!phoneOtp) {
+      toast.error("Please enter the OTP");
+      return;
+    }
+
+    setPhoneOtpLoading(true);
+
+    try {
+      await axios.post(`${API_BASE_URL}/api/auth/verify-otp-only`, {
+        phone: `+${newPhoneValue}`,
+        otp: phoneOtp,
+      });
+
+      const verifiedPhone = `+${newPhoneValue}`;
+
+      setForm((prev) => ({
+        ...prev,
+        phone: verifiedPhone,
+        whatsappNumber: prev.whatsapp ? verifiedPhone : prev.whatsappNumber,
+      }));
+
+      toast.success("Phone number verified");
+      setPhoneChangeStep("idle");
+      setNewPhoneValue("");
+      setPhoneOtp("");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Invalid OTP");
+    } finally {
+      setPhoneOtpLoading(false);
+    }
   };
 
   const handleImageChange = (e) => {
@@ -195,7 +276,7 @@ export default function EditAdPage() {
     <div className="rounded-md bg-white p-6">
       <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-4">
         <InfoCard title="Account ID" value={user?.accountId || "N/A"} />
-        <InfoCard title="Account Type" value="User" />
+        <InfoCard title="Account Type" value={isAgent ? "Agent" : "User"} />
       </div>
 
       <div className="flex">
@@ -357,13 +438,104 @@ export default function EditAdPage() {
               <label className="mb-1 block text-[16px] font-semibold text-slate-800">
                 Phone
               </label>
-              <input
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
-                placeholder="Phone number"
-                className="h-10 w-full rounded border border-slate-300 px-3 text-[16px] text-slate-600 placeholder:text-[16px] outline-none focus:border-slate-500"
-              />
+
+              {isAgent ? (
+                <input
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="Phone number"
+                  className="h-10 w-full rounded border border-slate-300 px-3 text-[16px] text-slate-600 placeholder:text-[16px] outline-none focus:border-slate-500"
+                />
+              ) : (
+                <>
+                  <input
+                    name="phone"
+                    value={form.phone}
+                    readOnly
+                    placeholder="Phone number"
+                    className="h-10 w-full cursor-not-allowed rounded border border-slate-300 bg-slate-100 px-3 text-[16px] text-slate-600 placeholder:text-[16px] outline-none"
+                  />
+
+                  {phoneChangeStep === "idle" && (
+                    <button
+                      type="button"
+                      onClick={startPhoneChange}
+                      className="mt-2 h-10 w-full cursor-pointer rounded border border-red-600 text-[14px] font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      Change Phone
+                    </button>
+                  )}
+
+                  {phoneChangeStep === "editing" && (
+                    <div className="mt-2 space-y-2 rounded border border-slate-200 bg-slate-50 p-3">
+                      <PhoneInput
+                        country="lk"
+                        value={newPhoneValue}
+                        onChange={setNewPhoneValue}
+                        enableSearch
+                        disableCountryGuess
+                        countryCodeEditable={false}
+                        placeholder="Enter new phone number"
+                        containerClass="!w-full"
+                        inputClass="!w-full !h-10 !text-[14px] !rounded !border !border-slate-300 !pl-14"
+                        buttonClass="!border !border-slate-300 !rounded-l !bg-white"
+                      />
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={sendPhoneOtp}
+                          disabled={phoneOtpLoading}
+                          className="h-9 flex-1 cursor-pointer rounded bg-slate-950 text-[13px] font-semibold text-white disabled:opacity-50"
+                        >
+                          {phoneOtpLoading ? "Sending..." : "Send OTP"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={cancelPhoneChange}
+                          className="h-9 cursor-pointer rounded border border-slate-300 px-4 text-[13px] font-semibold text-slate-700"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {phoneChangeStep === "otp" && (
+                    <div className="mt-2 space-y-2 rounded border border-slate-200 bg-slate-50 p-3">
+                      <input
+                        type="text"
+                        value={phoneOtp}
+                        maxLength={6}
+                        onChange={(e) => setPhoneOtp(e.target.value)}
+                        placeholder="Verification code"
+                        className="h-10 w-full rounded border border-slate-300 px-3 text-[14px] outline-none"
+                      />
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={verifyPhoneOtp}
+                          disabled={phoneOtpLoading}
+                          className="h-9 flex-1 cursor-pointer rounded bg-slate-950 text-[13px] font-semibold text-white disabled:opacity-50"
+                        >
+                          {phoneOtpLoading ? "Verifying..." : "Verify & Update"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={cancelPhoneChange}
+                          className="h-9 cursor-pointer rounded border border-slate-300 px-4 text-[13px] font-semibold text-slate-700"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <div>
