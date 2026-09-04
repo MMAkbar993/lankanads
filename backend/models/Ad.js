@@ -89,6 +89,14 @@ const adSchema = new mongoose.Schema(
       default: "pending",
       index: true,
     },
+    // When the ad was (re)submitted for review. Set on creation and bumped
+    // on republish only — unlike `updatedAt`, which background jobs and any
+    // edit also touch, and unlike `createdAt`, which never changes.
+    submittedAt: {
+        type: Date,
+        default: Date.now,
+        index: true,
+    },
     approvedAt: {
         type: Date,
         default: null,

@@ -1,7 +1,6 @@
 const Ad = require("../models/Ad");
 const Counter = require("../models/Counter");
 const { uploadBuffer, destroy } = require("../utils/cloudinaryUpload");
-const { reverseApprovalCredit } = require("../utils/creditRefund");
 const {
   PREMIUM_WINDOW_MS,
   withEffectiveType,
@@ -568,16 +567,19 @@ exports.republishAd = async (req, res) => {
       });
     }
 
-    // Republishing takes the ad out of "approved" the same way an admin
-    // reverting its status does — refund any charge already applied so it
-    // isn't silently orphaned, and re-entering moderation means it gets
-    // charged fresh if/when it's approved again.
-    const refund = await reverseApprovalCredit(ad, null);
-
+    // Republishing does NOT move money. The previous approval period was
+    // already used, so nothing is refunded — clearing creditCost just marks
+    // that cycle as closed so the next admin approval charges fresh at the
+    // newly chosen package type. Balance only changes at approval time.
+    ad.creditCost = null;
     ad.status = "pending";
     ad.type = type;
     ad.approvedAt = null;
     ad.expiresAt = null;
+    // Bumped so the ad surfaces at the top of the admin queue as a fresh
+    // submission (createdAt never changes; updatedAt gets touched by
+    // background jobs, so neither works for "recently submitted").
+    ad.submittedAt = new Date();
 
     await ad.save();
 
@@ -588,12 +590,8 @@ exports.republishAd = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: refund
-        ? `Ad submitted for republishing — ${refund.refundAmount} credits refunded`
-        : "Ad submitted for republishing",
+      message: "Ad submitted for republishing",
       ad: populatedAd,
-      refundedAmount: refund?.refundAmount ?? null,
-      agentBalance: refund?.agentBalance ?? null,
     });
   } catch (error) {
     console.error("Republish Ad Error:", error);

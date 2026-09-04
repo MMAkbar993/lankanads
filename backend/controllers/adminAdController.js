@@ -41,13 +41,13 @@ exports.getAdminAds = async (req, res) => {
         }
 
         const [rawAds, total] = await Promise.all([
-            // Sorted by updatedAt, not createdAt — createdAt never changes,
-            // so a republished ad (which only updates its updatedAt) would
-            // otherwise stay buried under its original creation date
-            // instead of surfacing near the top of the queue.
+            // Sorted by submittedAt so republished ads surface at the top.
+            // Not createdAt (never changes, so republished ads stay buried)
+            // and not updatedAt (the hourly expiry/downgrade job touches it,
+            // which would drag unrelated old ads back to the top).
             Ad.find(filter)
                 .populate("user", "accountId phone name email role")
-                .sort({ updatedAt: -1 })
+                .sort({ submittedAt: -1, createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
                 .lean(),
@@ -201,16 +201,39 @@ exports.updateAdStatus = async (req, res) => {
             });
         }
 
-        await CreditTransaction.create({
-            user: owner._id,
-            type: "debit",
-            amount: cost,
-            ad: preClaimAd._id,
-            description: `Ad approval: ${preClaimAd.adId} (${preClaimAd.type})`,
-            balanceBefore: owner.creditBalance,
-            balanceAfter: debited.creditBalance,
-            admin: req.admin?._id || null,
-        });
+        try {
+            await CreditTransaction.create({
+                user: owner._id,
+                type: "debit",
+                amount: cost,
+                ad: preClaimAd._id,
+                description: `Ad approval: ${preClaimAd.adId} (${preClaimAd.type})`,
+                balanceBefore: owner.creditBalance,
+                balanceAfter: debited.creditBalance,
+                admin: req.admin?._id || null,
+            });
+        } catch (ledgerError) {
+            // The ledger entry is what makes the deduction auditable, so if
+            // it can't be written we undo the whole approval rather than
+            // leave money moved with no record of it.
+            console.error("Credit ledger write failed:", ledgerError);
+
+            await User.findByIdAndUpdate(owner._id, {
+                $inc: { creditBalance: cost },
+            });
+
+            await Ad.findByIdAndUpdate(preClaimAd._id, {
+                status: preClaimAd.status,
+                approvedAt: preClaimAd.approvedAt ?? null,
+                expiresAt: preClaimAd.expiresAt ?? null,
+            });
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    "Could not record the credit transaction — approval was rolled back and no credits were charged. Please try again.",
+            });
+        }
 
         const finalAd = await Ad.findByIdAndUpdate(
             preClaimAd._id,

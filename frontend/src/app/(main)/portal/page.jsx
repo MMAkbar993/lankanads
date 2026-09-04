@@ -217,13 +217,7 @@ function MyAdsTab() {
     );
 
     if (republishAd.fulfilled.match(result)) {
-      const refundedAmount = result.payload?.refundedAmount;
-
-      toast.success(
-        typeof refundedAmount === "number" && refundedAmount > 0
-          ? `Ad submitted for republishing — ${refundedAmount} credits refunded`
-          : "Ad submitted for republishing"
-      );
+      toast.success("Ad submitted for republishing");
 
       setRepublishModalOpen(false);
       setRepublishAdId(null);

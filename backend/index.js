@@ -20,9 +20,26 @@ const { startScheduler } = require("./utils/adScheduler");
 // Vercel sets this automatically at runtime.
 const isVercel = !!process.env.VERCEL;
 
-connectDB().catch((error) => {
-    console.error("Initial MongoDB connection failed:", error.message);
-});
+const CreditTransaction = require("./models/CreditTransaction");
+
+// An earlier version of CreditTransaction had a unique index that assumed an
+// ad could only ever be charged once. Re-approving an ad (after a revert or
+// republish) legitimately writes a second debit, which that index rejects —
+// deducting the balance but failing to record it. Mongoose doesn't drop
+// indexes it no longer declares, so sync them explicitly on boot.
+const syncCreditIndexes = async () => {
+    try {
+        await CreditTransaction.syncIndexes();
+    } catch (error) {
+        console.error("CreditTransaction index sync failed:", error.message);
+    }
+};
+
+connectDB()
+    .then(syncCreditIndexes)
+    .catch((error) => {
+        console.error("Initial MongoDB connection failed:", error.message);
+    });
 
 if (!isVercel) {
     // node-cron needs a long-running process to fire on schedule, which
