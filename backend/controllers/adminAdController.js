@@ -2,6 +2,8 @@ const Ad = require("../models/Ad");
 const User = require("../models/User");
 const AdTypeCost = require("../models/AdTypeCost");
 const CreditTransaction = require("../models/CreditTransaction");
+const { reverseApprovalCredit } = require("../utils/creditRefund");
+const { withEffectiveType } = require("../utils/adTypeHelpers");
 
 const allowedStatus = ["pending", "approved", "rejected"];
 
@@ -38,16 +40,22 @@ exports.getAdminAds = async (req, res) => {
             ];
         }
 
-        const [ads, total] = await Promise.all([
+        const [rawAds, total] = await Promise.all([
+            // Sorted by updatedAt, not createdAt — createdAt never changes,
+            // so a republished ad (which only updates its updatedAt) would
+            // otherwise stay buried under its original creation date
+            // instead of surfacing near the top of the queue.
             Ad.find(filter)
                 .populate("user", "accountId phone name email role")
-                .sort({ createdAt: -1 })
+                .sort({ updatedAt: -1 })
                 .skip(skip)
                 .limit(limit)
                 .lean(),
 
             Ad.countDocuments(filter),
         ]);
+
+        const ads = rawAds.map(withEffectiveType);
 
         const pages = Math.ceil(total / limit) || 1;
         const adTypes = getAllowedTypes();
@@ -83,25 +91,38 @@ exports.updateAdStatus = async (req, res) => {
         }
 
         if (status !== "approved") {
-            const ad = await Ad.findByIdAndUpdate(
-                req.params.id,
-                { status },
-                { new: true, runValidators: true }
-            )
-                .populate("user", "accountId phone name email role")
-                .lean();
+            const existingAd = await Ad.findById(req.params.id);
 
-            if (!ad) {
+            if (!existingAd) {
                 return res.status(404).json({
                     success: false,
                     message: "Ad not found",
                 });
             }
 
+            // Moving an already-approved (and charged) ad away from
+            // "approved" — refund the agent before changing status.
+            let refund = null;
+
+            if (existingAd.status === "approved" && existingAd.creditCost) {
+                refund = await reverseApprovalCredit(existingAd, req.admin?._id);
+            }
+
+            existingAd.status = status;
+            await existingAd.save();
+
+            const ad = await Ad.findById(existingAd._id)
+                .populate("user", "accountId phone name email role")
+                .lean();
+
             return res.status(200).json({
                 success: true,
-                message: "Ad status updated successfully",
-                ad,
+                message: refund
+                    ? `Ad status updated — ${refund.refundAmount} credits refunded to agent`
+                    : "Ad status updated successfully",
+                ad: withEffectiveType(ad),
+                refundedAmount: refund?.refundAmount ?? null,
+                agentBalance: refund?.agentBalance ?? null,
             });
         }
 
@@ -109,16 +130,19 @@ exports.updateAdStatus = async (req, res) => {
         const now = new Date();
         const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-        // Atomically claim the ad: only succeeds if it's still pending, so a
-        // duplicate/concurrent approval request for the same ad can never
-        // reach the deduction logic below more than once.
-        const claimedAd = await Ad.findOneAndUpdate(
-            { _id: req.params.id, status: "pending" },
+        // Atomically claim the ad: only succeeds if it isn't already
+        // approved, so a duplicate/concurrent approval request for the same
+        // ad can never reach the deduction logic below more than once.
+        // Allowing any non-approved starting status (not just "pending")
+        // means an ad that was reverted to pending/rejected can be approved
+        // — and charged — again later.
+        const preClaimAd = await Ad.findOneAndUpdate(
+            { _id: req.params.id, status: { $ne: "approved" } },
             { status: "approved", approvedAt: now, expiresAt },
-            { new: true }
+            { new: false }
         );
 
-        if (!claimedAd) {
+        if (!preClaimAd) {
             const existing = await Ad.findById(req.params.id).lean();
 
             if (!existing) {
@@ -130,27 +154,27 @@ exports.updateAdStatus = async (req, res) => {
 
             return res.status(409).json({
                 success: false,
-                message: "Ad is not pending — it may have already been approved",
+                message: "Ad is already approved",
             });
         }
 
-        const owner = await User.findById(claimedAd.user);
+        const owner = await User.findById(preClaimAd.user);
 
         if (!owner || owner.role !== "agent") {
             // Non-agent-owned ad — approval already happened above, nothing
             // else changes, behavior stays identical to before this feature.
-            const ad = await Ad.findById(claimedAd._id)
+            const ad = await Ad.findById(preClaimAd._id)
                 .populate("user", "accountId phone name email role")
                 .lean();
 
             return res.status(200).json({
                 success: true,
                 message: "Ad status updated successfully",
-                ad,
+                ad: withEffectiveType(ad),
             });
         }
 
-        const costDoc = await AdTypeCost.findOne({ type: claimedAd.type });
+        const costDoc = await AdTypeCost.findOne({ type: preClaimAd.type });
         const cost = costDoc?.creditCost ?? 0;
 
         const debited = await User.findOneAndUpdate(
@@ -161,13 +185,14 @@ exports.updateAdStatus = async (req, res) => {
 
         if (!debited) {
             // Insufficient balance — undo the claim so the ad goes back to
-            // exactly its pre-approval state. Safe: this request is the sole
-            // owner of the pending->approved transition, nothing else could
-            // have touched it in between.
-            await Ad.findByIdAndUpdate(claimedAd._id, {
-                status: "pending",
-                approvedAt: null,
-                expiresAt: null,
+            // exactly its pre-approval state (whatever status it actually
+            // had — pending or rejected). Safe: this request is the sole
+            // owner of that status transition, nothing else could have
+            // touched it in between.
+            await Ad.findByIdAndUpdate(preClaimAd._id, {
+                status: preClaimAd.status,
+                approvedAt: preClaimAd.approvedAt ?? null,
+                expiresAt: preClaimAd.expiresAt ?? null,
             });
 
             return res.status(400).json({
@@ -180,15 +205,15 @@ exports.updateAdStatus = async (req, res) => {
             user: owner._id,
             type: "debit",
             amount: cost,
-            ad: claimedAd._id,
-            description: `Ad approval: ${claimedAd.adId} (${claimedAd.type})`,
+            ad: preClaimAd._id,
+            description: `Ad approval: ${preClaimAd.adId} (${preClaimAd.type})`,
             balanceBefore: owner.creditBalance,
             balanceAfter: debited.creditBalance,
             admin: req.admin?._id || null,
         });
 
         const finalAd = await Ad.findByIdAndUpdate(
-            claimedAd._id,
+            preClaimAd._id,
             { creditCost: cost },
             { new: true }
         )
@@ -198,7 +223,7 @@ exports.updateAdStatus = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Ad approved and credits deducted",
-            ad: finalAd,
+            ad: withEffectiveType(finalAd),
             agentBalance: debited.creditBalance,
         });
     } catch (error) {
@@ -299,6 +324,27 @@ exports.updateAd = async (req, res) => {
             });
         }
 
+        const existingAd = await Ad.findById(req.params.id);
+
+        if (!existingAd) {
+            return res.status(404).json({
+                success: false,
+                message: "Ad not found",
+            });
+        }
+
+        // Moving an already-approved (and charged) ad away from "approved"
+        // through this generic endpoint — refund the agent first.
+        let refund = null;
+
+        if (
+            updateData.status &&
+            existingAd.status === "approved" &&
+            existingAd.creditCost
+        ) {
+            refund = await reverseApprovalCredit(existingAd, req.admin?._id);
+        }
+
         const ad = await Ad.findByIdAndUpdate(
             req.params.id,
             updateData,
@@ -316,8 +362,12 @@ exports.updateAd = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Ad updated successfully",
+            message: refund
+                ? `Ad updated — ${refund.refundAmount} credits refunded to agent`
+                : "Ad updated successfully",
             ad,
+            refundedAmount: refund?.refundAmount ?? null,
+            agentBalance: refund?.agentBalance ?? null,
         });
     } catch (error) {
         console.error("Update Ad Error:", error);

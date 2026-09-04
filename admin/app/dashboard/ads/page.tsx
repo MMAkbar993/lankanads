@@ -399,12 +399,19 @@ export default function AdsPage() {
       )
     ) {
       const creditCost = result.payload.ad?.creditCost;
+      const refundedAmount = result.payload.refundedAmount;
 
-      toast.success(
-        typeof creditCost === 'number' && creditCost > 0
-          ? `Ad approved — ${creditCost} credits deducted (balance: ${result.payload.agentBalance})`
-          : 'Ad status updated successfully'
-      );
+      if (typeof creditCost === 'number' && creditCost > 0) {
+        toast.success(
+          `Ad approved — ${creditCost} credits deducted (balance: ${result.payload.agentBalance})`
+        );
+      } else if (typeof refundedAmount === 'number' && refundedAmount > 0) {
+        toast.success(
+          `Approval cancelled — ${refundedAmount} credits refunded (balance: ${result.payload.agentBalance})`
+        );
+      } else {
+        toast.success('Ad status updated successfully');
+      }
     } else {
       toast.error(
         result.payload || 'Failed to update status'

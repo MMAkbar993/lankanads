@@ -1,6 +1,11 @@
 const Ad = require("../models/Ad");
 const Counter = require("../models/Counter");
 const { uploadBuffer, destroy } = require("../utils/cloudinaryUpload");
+const { reverseApprovalCredit } = require("../utils/creditRefund");
+const {
+  PREMIUM_WINDOW_MS,
+  withEffectiveType,
+} = require("../utils/adTypeHelpers");
 
 const generateAdId = async () => {
   const counter = await Counter.findOneAndUpdate(
@@ -18,8 +23,6 @@ const generateAdId = async () => {
 const escapeRegex = (value = "") => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
-
-const PREMIUM_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // Ads keep VIP/Super placement for 24h from approval, then rank/display as
 // Normal — computed live here so listing order is always correct even
@@ -178,15 +181,18 @@ exports.getMyAds = async (req, res) => {
       ];
     }
 
-    const [ads, totalAds] = await Promise.all([
+    const [rawAds, totalAds] = await Promise.all([
       Ad.find(filter)
         .populate("user", "accountId phone name")
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
 
       Ad.countDocuments(filter),
     ]);
+
+    const ads = rawAds.map(withEffectiveType);
 
     const totalPages = Math.ceil(totalAds / limit);
 
@@ -265,7 +271,7 @@ exports.getPublicAds = async (req, res) => {
 
       const singleTypeFilter = buildTypeFilter(baseFilter, typeFilter, premiumCutoff);
 
-      const [ads, totalAds] = await Promise.all([
+      const [rawAds, totalAds] = await Promise.all([
         Ad.find(singleTypeFilter)
           .populate("user", "accountId phone name")
           .sort(sortOrder)
@@ -274,6 +280,8 @@ exports.getPublicAds = async (req, res) => {
           .lean(),
         Ad.countDocuments(singleTypeFilter),
       ]);
+
+      const ads = rawAds.map(withEffectiveType);
 
       const totalPages = Math.ceil(totalAds / LIMIT) || 1;
 
@@ -310,17 +318,20 @@ exports.getPublicAds = async (req, res) => {
         await Promise.all([
           Ad.find(vipFilter)
             .populate("user", "accountId phone name")
-            .sort(sortOrder),
+            .sort(sortOrder)
+            .lean(),
           Ad.find(superFilter)
             .populate("user", "accountId phone name")
             .sort(sortOrder)
             .skip(0)
-            .limit(SUPER_LIMIT),
+            .limit(SUPER_LIMIT)
+            .lean(),
           Ad.find(normalFilter)
             .populate("user", "accountId phone name")
             .sort(sortOrder)
             .skip(0)
-            .limit(NORMAL_LIMIT),
+            .limit(NORMAL_LIMIT)
+            .lean(),
           Ad.countDocuments(superFilter),
           Ad.countDocuments(normalFilter),
           Ad.countDocuments(vipFilter),
@@ -337,12 +348,14 @@ exports.getPublicAds = async (req, res) => {
             .populate("user", "accountId phone name")
             .sort(sortOrder)
             .skip(superSkip)
-            .limit(SUPER_LIMIT),
+            .limit(SUPER_LIMIT)
+            .lean(),
           Ad.find(normalFilter)
             .populate("user", "accountId phone name")
             .sort(sortOrder)
             .skip(normalSkip)
-            .limit(NORMAL_LIMIT),
+            .limit(NORMAL_LIMIT)
+            .lean(),
           Ad.countDocuments(superFilter),
           Ad.countDocuments(normalFilter),
           Ad.countDocuments(vipFilter),
@@ -361,6 +374,7 @@ exports.getPublicAds = async (req, res) => {
     );
 
     const totalAds = totalVipAds + totalSuperAds + totalNormalAds;
+    ads = ads.map(withEffectiveType);
 
     return res.status(200).json({
       success: true,
@@ -396,7 +410,9 @@ exports.getPublicAdById = async (req, res) => {
       _id: req.params.id,
       status: "approved",
       $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
-    }).populate("user", "accountId phone name");
+    })
+      .populate("user", "accountId phone name")
+      .lean();
 
     if (!ad) {
       return res.status(404).json({
@@ -407,7 +423,7 @@ exports.getPublicAdById = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      ad,
+      ad: withEffectiveType(ad),
     });
   } catch (error) {
     if (error.name === "CastError") {
@@ -552,6 +568,12 @@ exports.republishAd = async (req, res) => {
       });
     }
 
+    // Republishing takes the ad out of "approved" the same way an admin
+    // reverting its status does — refund any charge already applied so it
+    // isn't silently orphaned, and re-entering moderation means it gets
+    // charged fresh if/when it's approved again.
+    const refund = await reverseApprovalCredit(ad, null);
+
     ad.status = "pending";
     ad.type = type;
     ad.approvedAt = null;
@@ -566,8 +588,12 @@ exports.republishAd = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Ad submitted for republishing",
+      message: refund
+        ? `Ad submitted for republishing — ${refund.refundAmount} credits refunded`
+        : "Ad submitted for republishing",
       ad: populatedAd,
+      refundedAmount: refund?.refundAmount ?? null,
+      agentBalance: refund?.agentBalance ?? null,
     });
   } catch (error) {
     console.error("Republish Ad Error:", error);
@@ -628,7 +654,7 @@ const getAdsByType = async (req, res, adType) => {
     const premiumCutoff = new Date(Date.now() - PREMIUM_WINDOW_MS);
     const filter = buildTypeFilter(baseFilter, adType, premiumCutoff);
 
-    const [ads, totalAds] = await Promise.all([
+    const [rawAds, totalAds] = await Promise.all([
       Ad.find(filter)
         .populate("user", "accountId phone name")
         .sort({ approvedAt: -1, createdAt: -1 })
@@ -638,6 +664,8 @@ const getAdsByType = async (req, res, adType) => {
 
       Ad.countDocuments(filter),
     ]);
+
+    const ads = rawAds.map(withEffectiveType);
 
     const totalPages = Math.ceil(totalAds / limit);
 

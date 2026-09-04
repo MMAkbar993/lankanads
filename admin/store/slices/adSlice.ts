@@ -97,6 +97,7 @@ interface UpdateAdResponse {
   message?: string;
   ad?: Ad;
   agentBalance?: number;
+  refundedAmount?: number | null;
 }
 
 const initialState: AdState = {
