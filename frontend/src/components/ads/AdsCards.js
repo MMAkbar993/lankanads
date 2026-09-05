@@ -18,6 +18,7 @@ import {
 
 import { getPublicAds } from "@/../redux/features/publicAdSlice";
 import { getImageUrl } from "@/lib/getImageUrl";
+import { buildAdUrl } from "@/lib/adUrl";
 
 export default function AdsCards({ limit = 20, showPagination = true }) {
   const dispatch = useDispatch();
@@ -128,7 +129,7 @@ function AdCard({ item }) {
 
   const views = item.viewsCount ?? item.totalViews ?? item.views ?? 0;
 
-  const detailsUrl = `/all-ads/${item._id || item.adId}`;
+  const detailsUrl = buildAdUrl(item);
 
   const cardTheme = {
     VIP: "border-[#f0d28a] bg-[#fffaf0]",

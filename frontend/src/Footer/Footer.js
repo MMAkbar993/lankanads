@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Send, Heart } from "lucide-react";
 import Logo from "../assets/images/Logo.png";
+import SeoContentBlock from "@/components/SeoContentBlock";
 
 export default function Footer() {
     return (
@@ -52,6 +53,7 @@ export default function Footer() {
                             { label: "Categories", href: "/categories" },
                             { label: "Cities",     href: "/cities" },
                             { label: "Pricing",    href: "/pricing" },
+                            { label: "Blog",       href: "/blog" },
                         ]}
                     />
 
@@ -73,6 +75,11 @@ export default function Footer() {
                     />
 
                 </div>
+
+                <SeoContentBlock
+                    contentKey="footer_seo"
+                    className="mt-7 border-t border-white/10 pt-5 text-white/60"
+                />
 
                 <p className="mt-5 text-center text-[13px] text-white/55 sm:hidden">
                     © 2024 Lankan Ads. All Rights Reserved.

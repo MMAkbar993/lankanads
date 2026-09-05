@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, UserPlus, Users, Megaphone, X, UsersRound, Coins } from 'lucide-react';
+import { LayoutDashboard, UserPlus, Users, Megaphone, X, UsersRound, Coins, FileText, Globe } from 'lucide-react';
 
 const navItems = [
   { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
@@ -10,6 +10,8 @@ const navItems = [
   { label: 'All Ads', href: '/dashboard/ads', icon: Megaphone },
   { label: 'All Users', href: '/dashboard/users', icon: UsersRound },
   { label: 'Agent Credits', href: '/dashboard/agent-users', icon: Coins },
+  { label: 'Blog Posts', href: '/dashboard/blogs', icon: FileText },
+  { label: 'SEO Content', href: '/dashboard/seo-content', icon: Globe },
 ];
 
 interface SidebarProps {

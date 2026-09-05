@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getHomeAds } from "@/../redux/features/homeAdsSlice";
+import { buildAdUrl } from "@/lib/adUrl";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -154,7 +155,7 @@ function AdSection({ section, ads }) {
 
 function PriorityAdCard({ ad, section }) {
     const imageUrl = getImageUrl(ad.image?.url);
-    const detailsUrl = `/all-ads/${ad._id}`;
+    const detailsUrl = buildAdUrl(ad);
 
     return (
         <Link

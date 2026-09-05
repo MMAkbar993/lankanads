@@ -405,8 +405,18 @@ exports.getPublicAds = async (req, res) => {
 // list of already-fetched ads, which is empty on a fresh page load.
 exports.getPublicAdById = async (req, res) => {
   try {
+    const identifier = String(req.params.id || "");
+
+    // Accepts either a Mongo _id (legacy /all-ads/:id links) or the public
+    // adId (e.g. "AD123") used by the SEO-friendly /ads/... URLs.
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(identifier);
+
+    const identifierFilter = isObjectId
+      ? { _id: identifier }
+      : { adId: { $regex: `^${escapeRegex(identifier)}$`, $options: "i" } };
+
     const ad = await Ad.findOne({
-      _id: req.params.id,
+      ...identifierFilter,
       status: "approved",
       $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
     })

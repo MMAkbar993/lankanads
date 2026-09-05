@@ -14,6 +14,9 @@ const adminDashboardRoutes = require("./routes/adminDashboardRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const adminUserRoutes = require("./routes/adminUserRoutes");
 const cronRoutes = require("./routes/cronRoutes");
+const blogRoutes = require("./routes/blogRoutes");
+const adminBlogRoutes = require("./routes/adminBlogRoutes");
+const siteContentRoutes = require("./routes/siteContentRoutes");
 
 const { startScheduler } = require("./utils/adScheduler");
 
@@ -76,9 +79,12 @@ app.use(async (req, res, next) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/ads", adRoutes);
 app.use("/api/agents", agentRoutes);
+app.use("/api/blogs", blogRoutes);
+app.use("/api/site-content", siteContentRoutes);
 app.use("/admin", adminRoutes);
 app.use("/admin/agents", adminAgentRoutes);
 app.use("/admin/ads", adminAdRoutes);
+app.use("/admin/blogs", adminBlogRoutes);
 app.use("/admin/dashboard", adminDashboardRoutes);
 app.use("/api/contact", contactRoutes);
 app.use('/api/admin', adminUserRoutes);

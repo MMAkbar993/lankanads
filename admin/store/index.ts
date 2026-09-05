@@ -5,6 +5,8 @@ import agentReducer from './slices/agentSlice';
 import adReducer from './slices/adSlice';
 import userReducer from './slices/userSlice';
 import creditReducer from './slices/creditSlice';
+import blogReducer from './slices/blogSlice';
+import siteContentReducer from './slices/siteContentSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +16,8 @@ export const store = configureStore({
     ads: adReducer,
     users: userReducer,
     credit: creditReducer,
+    blogs: blogReducer,
+    siteContent: siteContentReducer,
   },
 });
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getSavedAds } from "@/../redux/features/savedAdsSlice";
+import { buildAdUrl } from "@/lib/adUrl";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -97,7 +98,7 @@ export default function SavedAdsPage() {
                             return (
                                 <Link
                                     key={item._id || item.adId || index}
-                                    href={`/all-ads/${item._id}`}
+                                    href={buildAdUrl(item)}
                                     className="group flex cursor-pointer gap-3 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--white)] p-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[var(--primary)] hover:shadow-md sm:gap-4"
                                 >
                                     <div className="relative h-[95px] w-[110px] flex-shrink-0 overflow-hidden rounded-md bg-[var(--gray)] sm:h-[130px] sm:w-[145px]">

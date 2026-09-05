@@ -160,7 +160,7 @@ NEXT_PUBLIC_API_BASE_URL=https://api.lankanadslk.com
 
 ```bash
 ssh root@187.127.220.64
-dWvf/s92Phkcp)0f
+cLKk#'h9W9uWdw67
 cd /var/www/lankanads
 git pull origin main
 cd backend && npm install && cd ..

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { getPublicAds } from "@/../redux/features/publicAdSlice";
 import { getImageUrl } from "@/lib/getImageUrl";
+import { buildAdUrl } from "@/lib/adUrl";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -419,7 +420,7 @@ function CategoryAdCard({ ad }) {
 
     return (
         <Link
-            href={`/all-ads/${ad._id}`}
+            href={buildAdUrl(ad)}
             className={`group relative grid min-h-[145px] grid-cols-1 overflow-hidden rounded-[9px] border transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:grid-cols-[38%_minmax(0,1fr)] ${cardTheme}`}
         >
             <div className="relative m-[6px] h-[190px] overflow-hidden rounded-[6px] bg-gray-100 sm:h-auto sm:min-h-[132px]">
