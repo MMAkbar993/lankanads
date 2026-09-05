@@ -10,8 +10,10 @@ export async function getSiteContent(keys = []) {
         const query = keys.length ? `?keys=${encodeURIComponent(keys.join(","))}` : "";
 
         const res = await fetch(`${API_BASE_URL}/api/site-content/public${query}`, {
-            // Revalidate periodically so admin edits appear without a redeploy.
-            next: { revalidate: 300 },
+            // Always read fresh: this is a tiny query, and an admin who edits
+            // or clears a block needs to see the change on the site straight
+            // away rather than waiting out a cache window.
+            cache: "no-store",
         });
 
         if (!res.ok) return {};
@@ -30,7 +32,7 @@ export async function getBlogs({ page = 1, limit = 12 } = {}) {
 
         const res = await fetch(
             `${API_BASE_URL}/api/blogs?page=${page}&limit=${limit}`,
-            { next: { revalidate: 300 } }
+            { next: { revalidate: 60 } }
         );
 
         if (!res.ok) return { blogs: [], pages: 1, total: 0 };
@@ -53,7 +55,7 @@ export async function getBlogBySlug(slug) {
 
         const res = await fetch(
             `${API_BASE_URL}/api/blogs/${encodeURIComponent(slug)}`,
-            { next: { revalidate: 300 } }
+            { next: { revalidate: 60 } }
         );
 
         if (!res.ok) return null;

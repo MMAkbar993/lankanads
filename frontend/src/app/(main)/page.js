@@ -1,11 +1,14 @@
 
 import AdsCards from "@/components/ads/AdsCards";
 import SeoContentBlock from "@/components/SeoContentBlock";
+import HomeBlogSection from "@/components/blog/HomeBlogSection";
 
 export default function Home() {
   return (
     <div>
       <AdsCards showPagination={true} />
+
+      <HomeBlogSection limit={3} />
 
       <SeoContentBlock
         contentKey="home_seo"

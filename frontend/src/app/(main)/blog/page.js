@@ -43,7 +43,7 @@ export default async function BlogListingPage() {
                         <Link
                             key={blog._id}
                             href={`/blog/${blog.slug}`}
-                            className="group overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:shadow-md"
+                            className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-teal-500 hover:shadow-md"
                         >
                             <div className="relative h-[170px] w-full bg-slate-100">
                                 {blog.coverImage?.url ? (
@@ -62,8 +62,8 @@ export default async function BlogListingPage() {
                                 )}
                             </div>
 
-                            <div className="p-4">
-                                <h2 className="line-clamp-2 text-[16px] font-bold leading-6 text-slate-900">
+                            <div className="flex flex-1 flex-col p-4">
+                                <h2 className="line-clamp-2 text-[16px] font-bold leading-6 text-slate-900 group-hover:text-teal-700">
                                     {blog.title}
                                 </h2>
 
@@ -76,6 +76,10 @@ export default async function BlogListingPage() {
                                 <p className="mt-3 text-[12px] text-slate-400">
                                     {formatDate(blog.publishedAt || blog.createdAt)}
                                 </p>
+
+                                <span className="mt-4 inline-flex w-full justify-center rounded-md bg-[var(--primary)] px-4 py-2.5 text-[13px] font-semibold text-white">
+                                    Read More
+                                </span>
                             </div>
                         </Link>
                     ))}

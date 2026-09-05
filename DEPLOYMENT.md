@@ -166,6 +166,7 @@ git pull origin main
 cd backend && npm install && cd ..
 cd frontend && npm install && npm run build && cd ..
 cd admin && npm install && npm run build && cd ..
+pm2 restart all
 
 pm2 start ecosystem.config.js
 pm2 save

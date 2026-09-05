@@ -5,6 +5,7 @@ import AuthLoader from "@/components/AuthLoader";
 import { Toaster } from "react-hot-toast";
 import Header from "@/Header/Header";
 import Footer from "@/Footer/Footer";
+import SeoContentBlock from "@/components/SeoContentBlock";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,6 +39,14 @@ export default function RootLayout({ children }) {
             }}
           />
           {children}
+
+          {/* SEO copy sits above the footer on every page — one block edited
+              once in the admin panel, shown site-wide. */}
+          <SeoContentBlock
+            contentKey="footer_seo"
+            className="mt-10 border-t border-slate-200 bg-slate-50 px-5 py-10"
+          />
+
           <Footer />
         </ReduxProvider>
       </body>

@@ -4,6 +4,7 @@ import {
     ShieldAlert,
     Heart,
     Newspaper,
+    BookOpen,
     Lock,
     Users,
     LogOut,
@@ -58,6 +59,14 @@ export default function SidebarButtons({
             icon: ShieldAlert,
             className: "bg-slate-900 text-white",
             href: "/all-ads",
+            onClick: closeMenu,
+        },
+
+        {
+            label: "Blog",
+            icon: BookOpen,
+            className: "bg-teal-600 text-white",
+            href: "/blog",
             onClick: closeMenu,
         },
 
