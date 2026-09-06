@@ -182,11 +182,20 @@ function MegaphoneIcon(props) {
    PRICING DATA
 ========================= */
 
+// Single source of truth for the advertised prices — the plan cards and the
+// comparison table below both read from here, so a price change is one edit
+// per plan instead of two places that can drift apart.
+const PRICES = {
+  vip: "LKR 8,000",
+  super: "LKR 1,500",
+  normal: "LKR 500",
+};
+
 const plans = [
   {
     id: "vip",
     name: "VIP Ad",
-    price: "LKR 8,000",
+    price: PRICES.vip,
     badge: "VIP",
     accent: "#F29A00",
     border: "#F1D18F",
@@ -202,7 +211,7 @@ const plans = [
   {
     id: "super",
     name: "Super Ad",
-    price: "LKR 1,500",
+    price: PRICES.super,
     badge: "SUPER",
     accent: "#ED145B",
     border: "#F2D5DE",
@@ -218,7 +227,7 @@ const plans = [
   {
     id: "normal",
     name: "Normal Ad",
-    price: "LKR 500",
+    price: PRICES.normal,
     badge: "NORMAL",
     accent: "#3B3B3D",
     border: "#D9DDE2",
@@ -233,7 +242,7 @@ const plans = [
 ];
 
 const comparisonRows = [
-  ["Price", "LKR 8,000", "LKR 1,500", "LKR 500"],
+  ["Price", PRICES.vip, PRICES.super, PRICES.normal],
   ["Premium Placement", "24 Hours", "24 Hours", "No"],
   ["Priority", "Highest (Above all ads)", "Second (After VIP ads)", "Standard"],
   ["Homepage Visibility", "Yes (24 hours)", "Yes (24 hours)", "Yes (Standard)"],

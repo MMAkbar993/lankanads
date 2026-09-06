@@ -3,6 +3,9 @@ import Link from "next/link";
 import { Send, Heart } from "lucide-react";
 import Logo from "../assets/images/Logo.png";
 
+const FACEBOOK_URL = process.env.NEXT_PUBLIC_FACEBOOK_URL || "";
+const TELEGRAM_URL = process.env.NEXT_PUBLIC_TELEGRAM_URL || "https://t.me/Lankanadd";
+
 export default function Footer() {
     return (
         <footer className="w-full bg-[#050609] text-white">
@@ -36,8 +39,17 @@ export default function Footer() {
                         </p>
 
                         <div className="mt-4 flex items-center gap-3">
-                            <SocialButton label="f" />
-                            <Link href="https://t.me/Lankanadd"><SocialButton label={<Send size={16} />} /> </Link>
+                            {FACEBOOK_URL && (
+                                <a
+                                    href={FACEBOOK_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label="Facebook"
+                                >
+                                    <SocialButton label="f" />
+                                </a>
+                            )}
+                            <Link href={TELEGRAM_URL} aria-label="Telegram"><SocialButton label={<Send size={16} />} /> </Link>
                         </div>
 
                         <p className="mt-5 hidden text-[13px] text-white/55 sm:block">

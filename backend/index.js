@@ -16,6 +16,7 @@ const adminUserRoutes = require("./routes/adminUserRoutes");
 const cronRoutes = require("./routes/cronRoutes");
 const blogRoutes = require("./routes/blogRoutes");
 const adminBlogRoutes = require("./routes/adminBlogRoutes");
+const adminReportRoutes = require("./routes/adminReportRoutes");
 const siteContentRoutes = require("./routes/siteContentRoutes");
 
 const { startScheduler } = require("./utils/adScheduler");
@@ -85,6 +86,7 @@ app.use("/admin", adminRoutes);
 app.use("/admin/agents", adminAgentRoutes);
 app.use("/admin/ads", adminAdRoutes);
 app.use("/admin/blogs", adminBlogRoutes);
+app.use("/admin/reports", adminReportRoutes);
 app.use("/admin/dashboard", adminDashboardRoutes);
 app.use("/api/contact", contactRoutes);
 app.use('/api/admin', adminUserRoutes);

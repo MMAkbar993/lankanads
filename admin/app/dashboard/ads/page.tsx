@@ -548,6 +548,10 @@ export default function AdsPage() {
                 }}
               >
                 {[
+                  // Type and Status lead the row — they're what the queue is
+                  // actioned on, so they shouldn't need a horizontal scroll.
+                  'Type',
+                  'Status',
                   'Image',
                   'Ad ID',
                   'User Info',
@@ -557,8 +561,6 @@ export default function AdsPage() {
                   'Category',
                   'Location',
                   'Price',
-                  'Type',
-                  'Status',
                   'Submitted',
                   'Approved',
                   'Expires',
@@ -619,6 +621,36 @@ export default function AdsPage() {
                           : undefined,
                       }}
                     >
+                      {/* Type */}
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <TypeDropdown
+                          adId={ad._id}
+                          current={
+                            ad.type ||
+                            'Normal Ad'
+                          }
+                          types={
+                            availableTypes
+                          }
+                          onUpdate={
+                            handleTypeChange
+                          }
+                        />
+                      </td>
+
+                      {/* Status */}
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <StatusDropdown
+                          adId={ad._id}
+                          current={
+                            ad.status
+                          }
+                          onUpdate={
+                            handleStatusChange
+                          }
+                        />
+                      </td>
+
                       {/* Image */}
                       <td className="px-4 py-3">
                         {imageUrl ? (
@@ -756,36 +788,6 @@ export default function AdsPage() {
                           ad.price > 0
                           ? `LKR ${ad.price.toLocaleString()}`
                           : '—'}
-                      </td>
-
-                      {/* Type */}
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <TypeDropdown
-                          adId={ad._id}
-                          current={
-                            ad.type ||
-                            'Normal Ad'
-                          }
-                          types={
-                            availableTypes
-                          }
-                          onUpdate={
-                            handleTypeChange
-                          }
-                        />
-                      </td>
-
-                      {/* Status */}
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <StatusDropdown
-                          adId={ad._id}
-                          current={
-                            ad.status
-                          }
-                          onUpdate={
-                            handleStatusChange
-                          }
-                        />
                       </td>
 
                       {/* Submitted */}

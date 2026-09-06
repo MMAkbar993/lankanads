@@ -14,6 +14,8 @@ import {
 } from "@/../redux/features/adInteractionSlice";
 import { getPublicAdById } from "@/../redux/features/publicAdSlice";
 import { getImageUrl } from "@/lib/getImageUrl";
+import ReportAdButton from "@/components/ads/ReportAdButton";
+import AdContactSection from "@/components/ads/AdContactSection";
 
 /**
  * Interactive part of the ad detail page.
@@ -297,9 +299,13 @@ export default function AdDetailView({ initialAd = null, identifier = "" }) {
                 අප වගකිවයුතු නැත.
               </p>
             </div>
+
+            <ReportAdButton adId={ad._id} />
           </div>
         </div>
       </div>
+
+      <AdContactSection />
     </section>
   );
 }

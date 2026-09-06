@@ -21,6 +21,11 @@ const {
     incrementView,
 } = require("../controllers/adInteractionController");
 
+const {
+    createReport,
+    getReportReasons,
+} = require("../controllers/reportController");
+
 const { protect } = require("../middleware/authMiddleware");
 const upload = require("../middleware/uploadMiddleware");
 
@@ -63,5 +68,10 @@ router.post("/:id/toggle-save", protect, toggleSave);
 
 router.get("/saved/my-ads", protect, getMySavedAds);
 router.post("/:id/view", incrementView);
+
+// Reporting an ad is open to logged-out visitors — a scam ad should be
+// reportable by anyone who lands on it.
+router.get("/report-reasons", getReportReasons);
+router.post("/:id/report", createReport);
 
 module.exports = router;

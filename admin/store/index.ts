@@ -7,6 +7,7 @@ import userReducer from './slices/userSlice';
 import creditReducer from './slices/creditSlice';
 import blogReducer from './slices/blogSlice';
 import siteContentReducer from './slices/siteContentSlice';
+import reportReducer from './slices/reportSlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     credit: creditReducer,
     blogs: blogReducer,
     siteContent: siteContentReducer,
+    reports: reportReducer,
   },
 });
 
