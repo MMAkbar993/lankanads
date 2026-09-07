@@ -187,9 +187,19 @@ pm2 restart all
 
 Create `/etc/nginx/sites-available/lankanads`:
 ```nginx
+# Canonical host is www.lankanadslk.com — it's what the SEO report and the
+# backlinks use, and what every canonical tag on the site points at. The bare
+# domain permanently redirects to it so Google never sees the same page at two
+# addresses (which splits ranking between them).
 server {
     listen 80;
-    server_name lankanadslk.com www.lankanadslk.com;
+    server_name lankanadslk.com;
+    return 301 https://www.lankanadslk.com$request_uri;
+}
+
+server {
+    listen 80;
+    server_name www.lankanadslk.com;
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;
@@ -234,6 +244,20 @@ sudo certbot --nginx -d lankanadslk.com -d www.lankanadslk.com -d admin.lankanad
 (Adjust `admin.lankanadslk.com` if you want a different domain/subdomain for the admin panel — update this nginx config, the DNS record, and `admin/.env` / `frontend/.env` accordingly.)
 
 Make sure DNS A-records for all four hostnames point at the VPS's IP before running certbot.
+
+### Verifying the www redirect
+
+After reloading nginx, both of these must be true:
+
+```bash
+# Bare domain redirects (expect: 301, Location: https://www.lankanadslk.com/)
+curl -sI http://lankanadslk.com/ | head -3
+
+# www serves the site (expect: 200)
+curl -sI https://www.lankanadslk.com/ | head -1
+```
+
+Certbot rewrites these blocks to add HTTPS and its own port-80 redirects — after running it, re-check the two commands above and confirm the bare domain still lands on `https://www.lankanadslk.com`. `NEXT_PUBLIC_SITE_URL` in `frontend/.env` must stay in sync with whichever host is canonical; it drives every canonical tag, the sitemap and the schema.
 
 ---
 

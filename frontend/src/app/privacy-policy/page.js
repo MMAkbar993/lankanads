@@ -312,7 +312,7 @@ function ContactSection() {
                             icon={Globe2}
                             label="Website"
                             value="lankanadslk.com"
-                            href="https://lankanadslk.com"
+                            href="https://www.lankanadslk.com"
                         />
 
                         <ContactCard

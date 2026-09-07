@@ -14,7 +14,7 @@ import {
 } from '@/store/slices/reportSlice';
 
 const SITE_URL =
-    process.env.NEXT_PUBLIC_SITE_URL || 'https://lankanadslk.com';
+    process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lankanadslk.com';
 
 const FILTERS: { label: string; value: ReportStatus | 'all' }[] = [
     { label: 'Pending', value: 'pending' },
