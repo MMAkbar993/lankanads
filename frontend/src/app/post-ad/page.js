@@ -33,9 +33,9 @@ const steps = [
         id: 3,
         title: "Choose Your Ad Package",
         description:
-            "Select the ad package you want: VIP Ad – LKR 8,000, Super Ad – LKR 1,500, Normal Ad – LKR 500. VIP and Super ads receive 24 hours of premium placement. All ads remain visible for 30 days.",
+            "Select the ad package you want: VIP Ad – LKR 2,000, Super Ad – LKR 1,000, Normal Ad – LKR 400. VIP and Super ads receive 24 hours of premium placement. All ads remain visible for 30 days.",
         descriptionSi:
-            "ඔබට අවශ්‍ය දැන්වීම් පැකේජය තෝරන්න: VIP Ad- රු. 8,000, Super Ad- රු. 1,500,  Normal Ad- රු. 500. VIP සහ Super දැන්වීම් සදහා පැය 24ක premium සේවාවක් ලැබෙයි. සියලුම දැන්වීම් දින 30ක් පුරා දර්ශනය වේ.",
+            "ඔබට අවශ්‍ය දැන්වීම් පැකේජය තෝරන්න: VIP Ad- රු. 2,000, Super Ad- රු. 1,000,  Normal Ad- රු. 400. VIP සහ Super දැන්වීම් සදහා පැය 24ක premium සේවාවක් ලැබෙයි. සියලුම දැන්වීම් දින 30ක් පුරා දර්ශනය වේ.",
     },
     {
         id: 4,

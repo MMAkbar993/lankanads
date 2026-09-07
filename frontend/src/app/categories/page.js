@@ -1,6 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import BannerImage from "@/assets/images/CategoryBanner.webp";
+import { pageMeta } from "@/lib/siteMeta";
+
+export const metadata = pageMeta({
+    title: "Online Advertisement Categories | Sri Lanka Online Listings",
+    description:
+        "Explore all the best Online Advertisement Categories today. Browse our Classified Ad Categories and Sri Lanka Online Listings to post your ads now!",
+    path: "/categories",
+});
 
 import {
     FaCrown,

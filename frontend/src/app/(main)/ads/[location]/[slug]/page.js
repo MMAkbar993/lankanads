@@ -2,8 +2,7 @@ import { notFound } from "next/navigation";
 import AdDetailView from "@/components/ads/AdDetailView";
 import { getPublicAd } from "@/lib/serverAds";
 import { buildAdUrl, extractAdId } from "@/lib/adUrl";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://lankanadslk.com";
+import { SITE_URL } from "@/lib/siteMeta";
 
 // Server-rendered metadata: search engines get a real title, description and
 // canonical URL in the initial HTML. The canonical always points at the ad's

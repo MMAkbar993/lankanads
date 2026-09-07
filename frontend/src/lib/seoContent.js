@@ -26,13 +26,13 @@ export async function getSiteContent(keys = []) {
     }
 }
 
-export async function getBlogs({ page = 1, limit = 12 } = {}) {
+export async function getBlogs({ page = 1, limit = 12, revalidate = 60 } = {}) {
     try {
         if (!API_BASE_URL) return { blogs: [], pages: 1, total: 0 };
 
         const res = await fetch(
             `${API_BASE_URL}/api/blogs?page=${page}&limit=${limit}`,
-            { next: { revalidate: 60 } }
+            { next: { revalidate } }
         );
 
         if (!res.ok) return { blogs: [], pages: 1, total: 0 };

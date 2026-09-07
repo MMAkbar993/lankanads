@@ -1,12 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getBlogs } from "@/lib/seoContent";
+import { pageMeta } from "@/lib/siteMeta";
 
-export const metadata = {
-    title: "Blog | LankanAdsLK",
+export const metadata = pageMeta({
+    title: "Lankan Ads Blog | Sri Lanka Classified Ads Tips & Guides",
     description:
-        "Tips, guides and updates on posting and finding classified ads in Sri Lanka.",
-};
+        "Read the Lankan Ads blog for tips, guides and updates on posting and finding classified ads in Sri Lanka. Learn how to sell faster and reach more buyers.",
+    path: "/blog",
+});
 
 const formatDate = (value) => {
     if (!value) return "";

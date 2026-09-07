@@ -33,7 +33,7 @@ const faqSections = [
             {
                 question: 'How much does it cost to post an ad?',
                 answer:
-                    'VIP Ad: LKR 8,000. Super Ad: LKR 1,500. Normal Ad: LKR 500.',
+                    'VIP Ad: LKR 2,000. Super Ad: LKR 1,000. Normal Ad: LKR 400.',
             },
             {
                 question: 'How long do ads stay visible?',

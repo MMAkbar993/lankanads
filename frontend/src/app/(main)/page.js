@@ -2,6 +2,14 @@
 import AdsCards from "@/components/ads/AdsCards";
 import SeoContentBlock from "@/components/SeoContentBlock";
 import HomeBlogSection from "@/components/blog/HomeBlogSection";
+import { pageMeta } from "@/lib/siteMeta";
+
+export const metadata = pageMeta({
+  title: "Sri Lanka ads | Online advertising in Sri Lanka | Post Ads",
+  description:
+    "Find the top Sri Lanka ads today! Lankan Ads is a highly reliable ads platform near me to buy, sell, and easily post online advertising in Sri Lanka.",
+  path: "/",
+});
 
 export default function Home() {
   return (

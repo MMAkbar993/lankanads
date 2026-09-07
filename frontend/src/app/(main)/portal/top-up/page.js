@@ -10,9 +10,9 @@ const WHATSAPP_NUMBER = "0761323624";
 const EZ_CASH_NUMBER = "0761323624";
 
 const PACKAGES = [
-    { label: "Vip Ad",    price: "Rs. 8,000.00" },
-    { label: "Super Ad",  price: "Rs. 1,500.00" },
-    { label: "Normal Ad", price: "Rs. 500.00" },
+    { label: "Vip Ad",    price: "Rs. 2,000.00" },
+    { label: "Super Ad",  price: "Rs. 1,000.00" },
+    { label: "Normal Ad", price: "Rs. 400.00" },
 ];
 
 const AGENT_BUTTONS = [

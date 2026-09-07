@@ -1,5 +1,13 @@
 import Link from "next/link";
 import PostAdButton from "@/components/PostAdButton";
+import { pageMeta } from "@/lib/siteMeta";
+
+export const metadata = pageMeta({
+  title: "Lankan Ads Pricing | Premium Ad Posting Packages | Buy Now",
+  description:
+    "Check out Lankan Ads Pricing to find the best ad posting packages in Sri Lanka. Choose a plan today to boost your ads and reach more buyers online!",
+  path: "/pricing",
+});
 
 /* =========================
    ICONS
@@ -186,9 +194,9 @@ function MegaphoneIcon(props) {
 // comparison table below both read from here, so a price change is one edit
 // per plan instead of two places that can drift apart.
 const PRICES = {
-  vip: "LKR 8,000",
-  super: "LKR 1,500",
-  normal: "LKR 500",
+  vip: "LKR 2,000",
+  super: "LKR 1,000",
+  normal: "LKR 400",
 };
 
 const plans = [

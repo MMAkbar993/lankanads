@@ -1,3 +1,4 @@
+import { pageMeta } from "@/lib/siteMeta";
 import Link from "next/link";
 import {
     AlertTriangle,
@@ -8,6 +9,13 @@ import {
     Mail,
     ShieldCheck,
 } from "lucide-react";
+
+export const metadata = pageMeta({
+    title: "Lankan Ads Privacy Policy | User Data Protection Guidelines",
+    description:
+        "Read the Lankan Ads Privacy Policy to understand how we collect, use, and protect your personal information while you browse and post ads securely.",
+    path: "/privacy-policy",
+});
 
 const policySections = [
     {

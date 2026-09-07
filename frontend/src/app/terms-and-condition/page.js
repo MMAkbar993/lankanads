@@ -1,3 +1,4 @@
+import { pageMeta } from "@/lib/siteMeta";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -8,6 +9,13 @@ import {
   Mail,
   ShieldCheck,
 } from "lucide-react";
+
+export const metadata = pageMeta({
+  title: "Terms and Conditions | Lankan Ads User Agreement | Read Now",
+  description:
+    "Please read the Terms and Conditions for using Lankan Ads. Review our user agreement to understand the rules and guidelines for posting ads securely.",
+  path: "/terms-and-condition",
+});
 
 const termsSections = [
   {

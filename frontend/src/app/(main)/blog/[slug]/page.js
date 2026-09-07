@@ -2,8 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getBlogBySlug } from "@/lib/seoContent";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://lankanadslk.com";
+import { SITE_URL } from "@/lib/siteMeta";
 
 // Server-rendered metadata is the whole point of this page being a server
 // component — search engines get a real title/description/canonical in the
