@@ -185,79 +185,174 @@ pm2 restart all
 
 ## Part 6 — nginx reverse proxy + HTTPS
 
-Create `/etc/nginx/sites-available/lankanads`:
+**The live config file is `/etc/nginx/sites-available/srilanka`** (symlinked into
+`sites-enabled/`). Earlier versions of this doc described a second file named
+`lankanads` — that one duplicated the same `server_name`s on port 80 only, so
+nginx logged "conflicting server name" and ignored half of it, and the
+`client_max_body_size` fix it contained never applied to real HTTPS traffic.
+It has been unlinked. **Do not re-enable it.** Check what's actually live with:
+
+```bash
+ls /etc/nginx/sites-enabled/     # should list only: srilanka
+```
+
+### The config
+
+Two things here are load-bearing and easy to lose:
+
+1. **The canonical host is `www.lankanadslk.com`** — it's what the SEO report
+   and the backlinks use, and what every canonical tag, the sitemap and the
+   schema point at (`NEXT_PUBLIC_SITE_URL` in `frontend/.env` and `admin/.env`).
+   The bare domain 301s to it so Google never sees the same page at two
+   addresses, which would split its ranking between them.
+2. **`client_max_body_size 10m`** must be on the **443** blocks. The backend
+   accepts uploads up to 5MB (see `uploadMiddleware.js`); nginx defaults to 1MB
+   and rejects anything bigger before it ever reaches the app — which shows up
+   as an unexplained "Failed to create ad" on larger images.
+
 ```nginx
-# Canonical host is www.lankanadslk.com — it's what the SEO report and the
-# backlinks use, and what every canonical tag on the site points at. The bare
-# domain permanently redirects to it so Google never sees the same page at two
-# addresses (which splits ranking between them).
+# ---------------- HTTPS ----------------
+
+# Canonical host: bare domain redirects to www
+server {
+    listen 443 ssl;
+    server_name lankanadslk.com;
+
+    ssl_certificate /etc/letsencrypt/live/lankanadslk.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/lankanadslk.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    return 301 https://www.lankanadslk.com$request_uri;
+}
+
+# Frontend
+server {
+    listen 443 ssl;
+    server_name www.lankanadslk.com;
+
+    ssl_certificate /etc/letsencrypt/live/lankanadslk.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/lankanadslk.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        proxy_pass http://localhost:3000/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# Backend API
+server {
+    listen 443 ssl;
+    server_name api.lankanadslk.com;
+
+    ssl_certificate /etc/letsencrypt/live/lankanadslk.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/lankanadslk.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    client_max_body_size 10m;
+
+    location / {
+        proxy_pass http://localhost:8000/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# Admin panel
+server {
+    listen 443 ssl;
+    server_name admin.lankanadslk.com;
+
+    ssl_certificate /etc/letsencrypt/live/lankanadslk.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/lankanadslk.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    client_max_body_size 10m;
+
+    location / {
+        proxy_pass http://localhost:3001/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# ---------------- HTTP -> HTTPS ----------------
+
 server {
     listen 80;
-    server_name lankanadslk.com;
+    server_name lankanadslk.com www.lankanadslk.com;
     return 301 https://www.lankanadslk.com$request_uri;
 }
 
 server {
     listen 80;
-    server_name www.lankanadslk.com;
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
+    server_name api.lankanadslk.com;
+    return 301 https://api.lankanadslk.com$request_uri;
 }
 
 server {
     listen 80;
     server_name admin.lankanadslk.com;
-    location / {
-        proxy_pass http://127.0.0.1:3001;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-
-server {
-    listen 80;
-    server_name api.lankanadslk.com;
-    # Backend/multer accepts uploads up to 5MB (see uploadMiddleware.js) —
-    # nginx's own default is 1MB, which silently rejects anything bigger
-    # before it reaches the app. Must be raised to match.
-    client_max_body_size 10m;
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
+    return 301 https://admin.lankanadslk.com$request_uri;
 }
 ```
 
-```bash
-sudo ln -s /etc/nginx/sites-available/lankanads /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-
-# HTTPS for all three domains at once:
-sudo certbot --nginx -d lankanadslk.com -d www.lankanadslk.com -d admin.lankanadslk.com -d api.lankanadslk.com
-```
-
-(Adjust `admin.lankanadslk.com` if you want a different domain/subdomain for the admin panel — update this nginx config, the DNS record, and `admin/.env` / `frontend/.env` accordingly.)
-
-Make sure DNS A-records for all four hostnames point at the VPS's IP before running certbot.
-
-### Verifying the www redirect
-
-After reloading nginx, both of these must be true:
+### Editing it safely
 
 ```bash
-# Bare domain redirects (expect: 301, Location: https://www.lankanadslk.com/)
-curl -sI http://lankanadslk.com/ | head -3
-
-# www serves the site (expect: 200)
-curl -sI https://www.lankanadslk.com/ | head -1
+sudo cp /etc/nginx/sites-available/srilanka /etc/nginx/sites-available/srilanka.backup
+sudo nano /etc/nginx/sites-available/srilanka
+sudo nginx -t                  # only reload if this passes
+sudo systemctl reload nginx    # reload, not restart — it won't drop live connections
 ```
 
-Certbot rewrites these blocks to add HTTPS and its own port-80 redirects — after running it, re-check the two commands above and confirm the bare domain still lands on `https://www.lankanadslk.com`. `NEXT_PUBLIC_SITE_URL` in `frontend/.env` must stay in sync with whichever host is canonical; it drives every canonical tag, the sitemap and the schema.
+If `nginx -t` fails, **do not reload**. Restore and try again:
+
+```bash
+sudo cp /etc/nginx/sites-available/srilanka.backup /etc/nginx/sites-available/srilanka
+```
+
+### Verifying
+
+```bash
+curl -sI http://lankanadslk.com/        | head -1   # expect 301
+curl -sI https://lankanadslk.com/       | head -1   # expect 301
+curl -sI https://www.lankanadslk.com/   | head -1   # expect 200
+curl -sI https://api.lankanadslk.com/api/ads/public | head -1   # expect 200
+curl -sI https://admin.lankanadslk.com/ | head -1   # expect 307 (middleware sends
+                                                    # logged-out visitors to /login)
+```
+
+### First-time certificate issue
+
+Only needed when setting up a new server. DNS A-records for all four hostnames
+must point at the VPS before running this:
+
+```bash
+sudo certbot --nginx -d lankanadslk.com -d www.lankanadslk.com \
+             -d admin.lankanadslk.com -d api.lankanadslk.com
+```
+
+Certbot rewrites the config to add its own HTTPS and port-80 redirect blocks,
+using `if ($host = ...)` inside the server block. That pattern redirects to the
+*same* hostname, which defeats the www canonicalisation above — so after running
+certbot, replace its generated blocks with the config in this section and re-run
+the verification commands. Renewals (`certbot renew`) don't touch the config, so
+this is a one-time cleanup per certificate issue.
 
 ---
 
