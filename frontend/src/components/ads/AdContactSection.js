@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { MessageCircle, Send, Tag } from "lucide-react";
-import { buildWhatsAppLink } from "@/lib/whatsapp";
+import { Send, Tag } from "lucide-react";
 
 const FACEBOOK_URL = process.env.NEXT_PUBLIC_FACEBOOK_URL || "";
 const TELEGRAM_URL = process.env.NEXT_PUBLIC_TELEGRAM_URL || "https://t.me/Lankanadd";
 
-// Sits at the bottom of every ad page: how to reach us, where to follow us,
-// and a route through to the pricing page for anyone who just decided they
-// want to post an ad of their own.
+// Sits at the bottom of every ad page: where to follow us, and a route
+// through to the pricing page for anyone who just decided they want to post
+// an ad of their own. (No "Contact Us on WhatsApp" here — that's the
+// business number, easily confused with the poster's own WhatsApp button
+// shown higher up on the ad.)
 export default function AdContactSection() {
     return (
         <div className="mt-6 rounded-xl border border-[var(--border)] bg-white p-5">
@@ -16,21 +17,11 @@ export default function AdContactSection() {
             </h2>
 
             <p className="mt-1 text-[13px] leading-6 text-slate-500">
-                Contact the LankanAdsLK team directly, follow us for the latest
-                listings, or check our ad packages and pricing.
+                Follow us for the latest listings, or check our ad packages and
+                pricing.
             </p>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <a
-                    href={buildWhatsAppLink("Hello, I need help with LankanAdsLK.")}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 rounded-md bg-green-600 px-4 py-2.5 text-[14px] font-semibold text-white transition hover:bg-green-700"
-                >
-                    <MessageCircle size={17} />
-                    Contact Us on WhatsApp
-                </a>
-
                 <Link
                     href="/pricing"
                     className="flex items-center justify-center gap-2 rounded-md bg-[var(--primary)] px-4 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[var(--primary-hover)]"
